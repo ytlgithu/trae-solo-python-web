@@ -6,6 +6,7 @@ django-taggit==6.1.0
 gunicorn==25.3.0
 Markdown==3.10.2
 packaging==26.1
+psycopg[binary]
 python-dotenv==1.2.2
 sqlparse==0.5.5
 webencodings==0.5.1
