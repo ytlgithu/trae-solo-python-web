@@ -1,0 +1,22 @@
+<article class="postcard">
+  <div class="postcard__meta">
+    <time datetime="{{ post.published_at|date:'c' }}">{{ post.published_at|date:'Y-m-d' }}</time>
+    {% if post.category %}
+      <span class="dot">•</span>
+      <a class="chip" href="{{ post.category.get_absolute_url }}">{{ post.category.name }}</a>
+    {% endif %}
+  </div>
+  <h2 class="postcard__title">
+    <a href="{{ post.get_absolute_url }}">{{ post.title }}</a>
+  </h2>
+  {% if post.excerpt %}
+    <p class="postcard__excerpt">{{ post.excerpt }}</p>
+  {% endif %}
+  {% if post.tags.all %}
+    <div class="postcard__tags">
+      {% for t in post.tags.all %}
+        <a class="tag" href="{% url 'tag' t.slug %}">#{{ t.name }}</a>
+      {% endfor %}
+    </div>
+  {% endif %}
+</article>

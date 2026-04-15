@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}首页 · 纸上博客{% endblock %}
+
+{% block content %}
+  <section class="hero">
+    <div class="hero__left">
+      <h1 class="hero__title">把想法写成文章，让它们有回声。</h1>
+      <p class="hero__subtitle">支持发布、分类、标签与评论审核。登录后可在后台管理内容。</p>
+    </div>
+    <form class="hero__search" action="{% url 'search' %}" method="get">
+      <input class="search" type="search" name="q" placeholder="搜索标题、摘要或正文…" />
+      <button class="btn" type="submit">搜索</button>
+    </form>
+  </section>
+
+  <section class="list">
+    {% for post in page_obj %}
+      {% include "blog/_post_card.html" with post=post %}
+    {% empty %}
+      <div class="empty">
+        <div class="empty__title">还没有可展示的文章</div>
+        <div class="empty__hint">进入后台发布第一篇文章：<a href="{% url 'admin:index' %}">/admin/</a></div>
+      </div>
+    {% endfor %}
+  </section>
+
+  {% include "_pagination.html" %}
+{% endblock %}

@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}搜索 · 纸上博客{% endblock %}
+
+{% block content %}
+  <section class="pagehead">
+    <h1 class="pagehead__title">搜索</h1>
+    <form class="pagehead__search" action="{% url 'search' %}" method="get">
+      <input class="search" type="search" name="q" value="{{ q }}" placeholder="输入关键词…" />
+      <button class="btn" type="submit">查找</button>
+    </form>
+  </section>
+
+  <section class="list">
+    {% for post in page_obj %}
+      {% include "blog/_post_card.html" with post=post %}
+    {% empty %}
+      <div class="empty">
+        <div class="empty__title">没有找到匹配的文章</div>
+        <div class="empty__hint">尝试更短的关键词，或仅搜索标题中的核心词。</div>
+      </div>
+    {% endfor %}
+  </section>
+
+  {% include "_pagination.html" with q=q %}
+{% endblock %}
