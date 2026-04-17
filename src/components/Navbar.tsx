@@ -51,7 +51,7 @@ export const Navbar = () => {
                   )}
                 </button>
                 
-                <div className={`absolute right-0 top-full mt-2 w-48 glass rounded-2xl p-2 transition-all duration-300 ${
+                <div className={`absolute right-0 top-full mt-2 w-48 bg-background border border-border shadow-2xl rounded-2xl p-2 transition-all duration-300 ${
                   isDropdownOpen 
                     ? 'opacity-100 translate-y-0 pointer-events-auto' 
                     : 'opacity-0 translate-y-2 pointer-events-none'
