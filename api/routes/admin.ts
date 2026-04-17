@@ -16,6 +16,11 @@ const getAdminUserId = async (req: Request): Promise<string | null> => {
   return user.id
 }
 
+const isSuperAdmin = async (userId: string): Promise<boolean> => {
+  const user = await prisma.user.findUnique({ where: { id: userId } })
+  return Boolean(user && user.username === 'admin')
+}
+
 router.get('/posts', async (req: Request, res: Response): Promise<void> => {
   try {
     const adminId = await getAdminUserId(req)
@@ -172,6 +177,11 @@ router.patch('/users/:id/role', async (req: Request, res: Response): Promise<voi
       return
     }
 
+    if (!(await isSuperAdmin(adminId))) {
+      res.status(403).json({ error: '只有超级管理员可以修改用户权限' })
+      return
+    }
+
     const { id } = req.params
     const { role } = req.body
 
@@ -183,6 +193,11 @@ router.patch('/users/:id/role', async (req: Request, res: Response): Promise<voi
     const targetUser = await prisma.user.findUnique({ where: { id } })
     if (!targetUser) {
       res.status(404).json({ error: 'User not found' })
+      return
+    }
+
+    if (targetUser.username === 'admin') {
+      res.status(403).json({ error: '不能修改超级管理员权限' })
       return
     }
 

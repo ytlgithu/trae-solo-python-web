@@ -96,6 +96,14 @@ export const Admin = () => {
       alert('不能修改自己的权限')
       return
     }
+    if (targetUser.username === 'admin') {
+      alert('不能修改超级管理员权限')
+      return
+    }
+    if (user?.username !== 'admin') {
+      alert('只有超级管理员可以修改用户权限')
+      return
+    }
     const nextRole = targetUser.role === 'ADMIN' ? 'USER' : 'ADMIN'
     try {
       await fetcher(`/admin/users/${targetUser.id}/role`, {
@@ -247,7 +255,7 @@ export const Admin = () => {
                 <div className="flex items-center gap-3 shrink-0">
                   <button
                     onClick={() => toggleUserRole(u)}
-                    disabled={u.id === user?.id}
+                    disabled={u.id === user?.id || u.username === 'admin' || user?.username !== 'admin'}
                     className="px-4 py-2 rounded-xl bg-border/40 hover:bg-border/80 disabled:opacity-50 disabled:hover:bg-border/40 transition-colors text-sm font-bold"
                   >
                     {u.role === 'ADMIN' ? '取消管理员' : '设为管理员'}
