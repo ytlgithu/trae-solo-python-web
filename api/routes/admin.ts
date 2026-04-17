@@ -1,6 +1,7 @@
 import { Router, type Request, type Response } from 'express'
 import jwt from 'jsonwebtoken'
 import prisma from '../db.js'
+import { writeLog } from '../operationLog.js'
 
 const router = Router()
 const JWT_SECRET = process.env.JWT_SECRET || 'secret_key'
@@ -13,27 +14,6 @@ const getAdminUserId = async (req: Request): Promise<string | null> => {
   if (!user) return null
   if (user.role !== 'ADMIN') return null
   return user.id
-}
-
-const writeLog = async (params: { actorId: string; action: string; target?: string; detail?: string }) => {
-  await prisma.operationLog.create({
-    data: {
-      actorId: params.actorId,
-      action: params.action,
-      target: params.target,
-      detail: params.detail,
-    },
-  })
-
-  const old = await prisma.operationLog.findMany({
-    orderBy: { createdAt: 'desc' },
-    skip: 200,
-    select: { id: true },
-  })
-
-  if (old.length > 0) {
-    await prisma.operationLog.deleteMany({ where: { id: { in: old.map((x) => x.id) } } })
-  }
 }
 
 router.get('/posts', async (req: Request, res: Response): Promise<void> => {

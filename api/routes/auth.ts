@@ -2,6 +2,7 @@ import { Router, type Request, type Response } from 'express'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import prisma from '../db.js'
+import { writeLog } from '../operationLog.js'
 
 const router = Router()
 const JWT_SECRET = process.env.JWT_SECRET || 'secret_key'
@@ -28,6 +29,13 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
         role,
         profile: { create: {} }
       }
+    })
+
+    await writeLog({
+      actorId: user.id,
+      action: 'AUTH_REGISTER',
+      target: user.id,
+      detail: `${user.username} (${user.role})`,
     })
 
     const token = jwt.sign({ id: user.id, role: user.role, username: user.username }, JWT_SECRET, { expiresIn: '7d' })
@@ -58,6 +66,13 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
     if (role !== user.role) {
       await prisma.user.update({ where: { id: user.id }, data: { role } })
     }
+
+    await writeLog({
+      actorId: user.id,
+      action: 'AUTH_LOGIN',
+      target: user.id,
+      detail: user.username,
+    })
 
     const token = jwt.sign({ id: user.id, role, username: user.username }, JWT_SECRET, { expiresIn: '7d' })
     res.json({ token, user: { id: user.id, username: user.username, role } })

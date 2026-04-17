@@ -1,6 +1,7 @@
 import { Router, type Request, type Response } from 'express'
 import jwt from 'jsonwebtoken'
 import prisma from '../db.js'
+import { writeLog } from '../operationLog.js'
 
 const router = Router()
 
@@ -97,6 +98,13 @@ router.post('/:id/comments', async (req: Request, res: Response): Promise<void> 
       }
     })
 
+    await writeLog({
+      actorId: decoded.id,
+      action: 'COMMENT_CREATE',
+      target: comment.id,
+      detail: `post:${postId}`,
+    })
+
     res.json(comment)
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Server error'
@@ -138,6 +146,13 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
           }))
         } : undefined
       }
+    })
+
+    await writeLog({
+      actorId: decoded.id,
+      action: 'POST_CREATE',
+      target: post.id,
+      detail: `${post.title} (${status})`,
     })
 
     res.json(post)
