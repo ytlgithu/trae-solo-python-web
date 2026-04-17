@@ -1,0 +1,71 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String    @id @default(cuid())
+  username  String    @unique
+  password  String
+  role      String    @default("USER") // USER, ADMIN
+  createdAt DateTime  @default(now())
+  profile   Profile?
+  posts     Post[]
+  comments  Comment[]
+}
+
+model Profile {
+  id        String  @id @default(cuid())
+  avatarUrl String?
+  bio       String?
+  userId    String  @unique
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Category {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  posts     Post[]
+}
+
+model Tag {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  posts     Post[]   @relation("PostTags")
+}
+
+model Post {
+  id          String    @id @default(cuid())
+  title       String
+  slug        String    @unique
+  excerpt     String?
+  content     String
+  status      String    @default("DRAFT") // DRAFT, PUBLISHED
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  publishedAt DateTime?
+  authorId    String
+  categoryId  String?
+  author      User      @relation(fields: [authorId], references: [id])
+  category    Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  comments    Comment[]
+  tags        Tag[]     @relation("PostTags")
+}
+
+model Comment {
+  id        String    @id @default(cuid())
+  content   String
+  status    String    @default("PENDING") // PENDING, APPROVED, HIDDEN
+  createdAt DateTime  @default(now())
+  postId    String
+  userId    String
+  post      Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}

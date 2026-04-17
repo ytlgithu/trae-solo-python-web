@@ -1,0 +1,44 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&family=Space+Grotesk:wght@300;400;500;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 249 249 248; /* #F9F9F8 */
+    --foreground: 17 17 17; /* #111111 */
+    --muted: 153 153 153;
+    --border: 226 226 226;
+    --primary: 214 69 61; /* #d6453d */
+    
+    font-family: 'Noto Sans SC', sans-serif;
+    background-color: rgb(var(--background));
+    color: rgb(var(--foreground));
+  }
+
+  .dark {
+    --background: 10 10 10; /* #0A0A0A */
+    --foreground: 234 234 234; /* #EAEAEA */
+    --muted: 136 136 136;
+    --border: 51 51 51;
+    --primary: 224 89 81;
+  }
+
+  body {
+    @apply antialiased transition-colors duration-300;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Space Grotesk', 'Noto Sans SC', sans-serif;
+  }
+}
+
+@layer utilities {
+  .glass {
+    @apply bg-white/60 dark:bg-black/60 backdrop-blur-lg border border-white/20 dark:border-white/10;
+  }
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-500 dark:from-white dark:to-gray-400;
+  }
+}
