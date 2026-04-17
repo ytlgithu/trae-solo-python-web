@@ -1,4 +1,5 @@
 import { Router, type Request, type Response } from 'express'
+import jwt from 'jsonwebtoken'
 import prisma from '../db.js'
 
 const router = Router()
@@ -86,7 +87,7 @@ router.post('/:id/comments', async (req: Request, res: Response): Promise<void> 
     const { id: postId } = req.params
     const { content } = req.body
 
-    const decoded = require('jsonwebtoken').verify(token, process.env.JWT_SECRET || 'secret_key') as { id: string }
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret_key') as { id: string }
     
     const comment = await prisma.comment.create({
       data: {
@@ -99,7 +100,8 @@ router.post('/:id/comments', async (req: Request, res: Response): Promise<void> 
 
     res.json(comment)
   } catch (error) {
-    res.status(500).json({ error: 'Server error' })
+    const message = error instanceof Error ? error.message : 'Server error'
+    res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Server error' : message })
   }
 })
 
@@ -112,7 +114,7 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
       return
     }
 
-    const decoded = require('jsonwebtoken').verify(token, process.env.JWT_SECRET || 'secret_key') as { id: string }
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret_key') as { id: string }
     const { title, slug, excerpt, content, status, category, tags } = req.body
 
     const post = await prisma.post.create({
@@ -141,7 +143,8 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
 
     res.json(post)
   } catch (error) {
-    res.status(500).json({ error: 'Failed to create post' })
+    const message = error instanceof Error ? error.message : 'Failed to create post'
+    res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Failed to create post' : message })
   }
 })
 
