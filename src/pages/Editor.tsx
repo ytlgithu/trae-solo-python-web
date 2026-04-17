@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../store/auth'
 import { fetcher } from '../lib/api'
 import { Loader2 } from 'lucide-react'
@@ -8,7 +8,10 @@ import { Loader2 } from 'lucide-react'
 export const Editor = () => {
   const { user } = useAuth()
   const navigate = useNavigate()
+  const { id } = useParams()
+  const isEditing = !!id
   const [loading, setLoading] = useState(false)
+  const [initialLoading, setInitialLoading] = useState(isEditing)
   const [form, setForm] = useState({
     title: '',
     excerpt: '',
@@ -18,17 +21,46 @@ export const Editor = () => {
     status: 'DRAFT'
   })
 
+  useEffect(() => {
+    if (isEditing && id) {
+      fetcher(`/posts/id/${id}`)
+        .then((data) => {
+          setForm({
+            title: data.title || '',
+            excerpt: data.excerpt || '',
+            content: data.content || '',
+            category: data.category?.name || '',
+            tags: data.tags?.map((t: any) => t.name).join(', ') || '',
+            status: data.status || 'DRAFT'
+          })
+        })
+        .catch((err) => {
+          alert(err.message)
+          navigate('/profile')
+        })
+        .finally(() => setInitialLoading(false))
+    }
+  }, [id, isEditing, navigate])
+
   if (!user) return <div className="p-24 text-center">请先登录</div>
+  if (initialLoading) return <div className="p-24 text-center">加载中...</div>
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     try {
-      const slug = form.title.toLowerCase().replace(/[\s\W-]+/g, '-') + '-' + Date.now().toString(36)
-      await fetcher('/posts', {
-        method: 'POST',
-        body: JSON.stringify({ ...form, slug })
-      })
+      if (isEditing) {
+        await fetcher(`/posts/${id}`, {
+          method: 'PATCH',
+          body: JSON.stringify(form)
+        })
+      } else {
+        const slug = form.title.toLowerCase().replace(/[\s\W-]+/g, '-') + '-' + Date.now().toString(36)
+        await fetcher('/posts', {
+          method: 'POST',
+          body: JSON.stringify({ ...form, slug })
+        })
+      }
       navigate('/profile')
     } catch (err: any) {
       alert(err.message)
@@ -43,7 +75,7 @@ export const Editor = () => {
       animate={{ opacity: 1, y: 0 }}
       className="max-w-4xl mx-auto"
     >
-      <h1 className="text-4xl font-bold mb-12 font-['Space_Grotesk']">创作中心</h1>
+      <h1 className="text-4xl font-bold mb-12 font-['Space_Grotesk']">{isEditing ? '编辑文章' : '创作中心'}</h1>
       
       <form onSubmit={handleSubmit} className="space-y-8 glass p-10 rounded-3xl">
         <input 
@@ -101,7 +133,7 @@ export const Editor = () => {
             disabled={loading}
             className="flex-1 py-3 bg-primary text-white rounded-xl font-bold flex justify-center items-center gap-2 hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20 disabled:opacity-50"
           >
-            {loading ? <Loader2 className="animate-spin" /> : '保存文章'}
+            {loading ? <Loader2 className="animate-spin" /> : (isEditing ? '保存修改' : '保存文章')}
           </button>
         </div>
       </form>

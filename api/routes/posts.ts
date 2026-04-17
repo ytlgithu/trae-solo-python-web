@@ -47,6 +47,29 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
   }
 })
 
+// Get post by id (for editing)
+router.get('/id/:id', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params
+    const post = await prisma.post.findUnique({
+      where: { id },
+      include: {
+        category: true,
+        tags: true
+      }
+    })
+
+    if (!post) {
+      res.status(404).json({ error: 'Post not found' })
+      return
+    }
+
+    res.json(post)
+  } catch (error) {
+    res.status(500).json({ error: 'Server error' })
+  }
+})
+
 // Get post by slug
 router.get('/:slug', async (req: Request, res: Response): Promise<void> => {
   try {
@@ -159,6 +182,63 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to create post'
     res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Failed to create post' : message })
+  }
+})
+
+// Update Post
+router.patch('/:id', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const token = req.headers.authorization?.split(' ')[1]
+    if (!token) {
+      res.status(401).json({ error: 'Unauthorized' })
+      return
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret_key') as { id: string }
+    const { id } = req.params
+    const { title, excerpt, content, status, category, tags } = req.body
+
+    const existing = await prisma.post.findUnique({ where: { id } })
+    if (!existing || existing.authorId !== decoded.id) {
+      res.status(403).json({ error: 'Forbidden' })
+      return
+    }
+
+    const post = await prisma.post.update({
+      where: { id },
+      data: {
+        title,
+        excerpt,
+        content,
+        status,
+        publishedAt: status === 'PUBLISHED' && !existing.publishedAt ? new Date() : existing.publishedAt,
+        category: category ? {
+          connectOrCreate: {
+            where: { slug: category.toLowerCase().replace(/[\s\W-]+/g, '-') },
+            create: { name: category, slug: category.toLowerCase().replace(/[\s\W-]+/g, '-') }
+          }
+        } : undefined,
+        tags: tags ? {
+          set: [],
+          connectOrCreate: tags.split(',').map((t: string) => ({
+            where: { slug: t.trim().toLowerCase().replace(/[\s\W-]+/g, '-') },
+            create: { name: t.trim(), slug: t.trim().toLowerCase().replace(/[\s\W-]+/g, '-') }
+          }))
+        } : undefined
+      }
+    })
+
+    await writeLog({
+      actorId: decoded.id,
+      action: 'POST_UPDATE',
+      target: post.id,
+      detail: `${post.title} (${status})`,
+    })
+
+    res.json(post)
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to update post'
+    res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Failed to update post' : message })
   }
 })
 

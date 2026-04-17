@@ -37,6 +37,7 @@ function App() {
               <Route path="/register" element={<Register />} />
               <Route path="/post/:slug" element={<PostDetail />} />
               <Route path="/post/new" element={<Editor />} />
+              <Route path="/post/:id/edit" element={<Editor />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/admin" element={<Admin />} />
             </Routes>
