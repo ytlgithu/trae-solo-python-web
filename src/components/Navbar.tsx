@@ -3,10 +3,12 @@ import { motion } from 'framer-motion'
 import { useAuth } from '../store/auth'
 import { PenSquare, LogOut, User as UserIcon } from 'lucide-react'
 import { useState, useRef, useEffect } from 'react'
+import { fetcher } from '../lib/api'
 
 export const Navbar = () => {
   const { user, logout } = useAuth()
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
+  const [pendingCount, setPendingCount] = useState(0)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -18,6 +20,27 @@ export const Navbar = () => {
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
+
+  useEffect(() => {
+    if (!user || user.role !== 'ADMIN') return
+    let cancelled = false
+
+    const load = async () => {
+      try {
+        const data = await fetcher('/admin/summary')
+        if (!cancelled) setPendingCount(Number(data.pendingCommentsCount || 0))
+      } catch {
+        if (!cancelled) setPendingCount(0)
+      }
+    }
+
+    load()
+    const t = window.setInterval(load, 30000)
+    return () => {
+      cancelled = true
+      window.clearInterval(t)
+    }
+  }, [user?.id, user?.role])
 
   return (
     <motion.header
@@ -42,13 +65,20 @@ export const Navbar = () => {
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                   className="flex items-center gap-2 outline-none"
                 >
-                  {user.profile?.avatarUrl ? (
-                    <img src={user.profile.avatarUrl} alt="avatar" className="w-8 h-8 rounded-full object-cover border-2 border-primary/20" />
-                  ) : (
-                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
-                      <UserIcon size={16} />
-                    </div>
-                  )}
+                  <div className="relative">
+                    {user.profile?.avatarUrl ? (
+                      <img src={user.profile.avatarUrl} alt="avatar" className="w-8 h-8 rounded-full object-cover border-2 border-primary/20" />
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
+                        <UserIcon size={16} />
+                      </div>
+                    )}
+                    {user.role === 'ADMIN' && pendingCount > 0 ? (
+                      <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center shadow-md">
+                        {pendingCount > 99 ? '99+' : pendingCount}
+                      </span>
+                    ) : null}
+                  </div>
                 </button>
                 
                 <div className={`absolute right-0 top-full mt-2 w-48 glass rounded-2xl p-2 transition-all duration-300 ${
@@ -67,6 +97,15 @@ export const Navbar = () => {
                   >
                     个人中心
                   </Link>
+                  {user.role === 'ADMIN' ? (
+                    <Link
+                      to="/admin"
+                      onClick={() => setIsDropdownOpen(false)}
+                      className="block px-4 py-2 text-sm hover:bg-primary/10 hover:text-primary rounded-xl transition-colors"
+                    >
+                      管理后台
+                    </Link>
+                  ) : null}
                   <button
                     onClick={() => {
                       setIsDropdownOpen(false)

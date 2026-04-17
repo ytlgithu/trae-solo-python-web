@@ -7,6 +7,7 @@ import { Register } from './pages/Register'
 import { PostDetail } from './pages/PostDetail'
 import { Profile } from './pages/Profile'
 import { Editor } from './pages/Editor'
+import { Admin } from './pages/Admin'
 import { Navbar } from './components/Navbar'
 import { useAuth } from './store/auth'
 
@@ -37,6 +38,7 @@ function App() {
               <Route path="/post/:slug" element={<PostDetail />} />
               <Route path="/post/new" element={<Editor />} />
               <Route path="/profile" element={<Profile />} />
+              <Route path="/admin" element={<Admin />} />
             </Routes>
           </AnimatePresence>
         </main>
