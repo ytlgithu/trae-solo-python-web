@@ -32,7 +32,7 @@ export const Navbar = () => {
 
         <nav className="flex items-center gap-6">
           <a 
-            href="http://192.168.10.248:10080" 
+            href="http://192.168.10.248:18080" 
             target="_blank" 
             rel="noopener noreferrer"
             className="flex items-center gap-2 text-sm font-medium hover:text-primary transition-colors"
