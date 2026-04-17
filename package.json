@@ -6,7 +6,7 @@
   "scripts": {
     "client:dev": "vite",
     "build": "npx prisma generate && tsc -b && vite build",
-    "start": "npx prisma migrate deploy && NODE_ENV=production tsx api/server.ts",
+    "start": "npx prisma db push --accept-data-loss && NODE_ENV=production tsx api/server.ts",
     "lint": "eslint .",
     "preview": "vite preview",
     "check": "tsc --noEmit",
