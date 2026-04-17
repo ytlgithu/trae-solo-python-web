@@ -1,14 +1,16 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { useAuth } from '../store/auth'
 import { fetcher } from '../lib/api'
-import { Camera } from 'lucide-react'
+import { Camera, Loader2 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 export const Profile = () => {
   const { user, checkAuth } = useAuth()
   const [posts, setPosts] = useState([])
   const [loading, setLoading] = useState(true)
+  const [uploading, setUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (user) {
@@ -17,6 +19,67 @@ export const Profile = () => {
         .finally(() => setLoading(false))
     }
   }, [user])
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('图片大小不能超过 5MB')
+      return
+    }
+
+    setUploading(true)
+    try {
+      const reader = new FileReader()
+      reader.readAsDataURL(file)
+      reader.onload = (event) => {
+        const img = new Image()
+        img.src = event.target?.result as string
+        img.onload = async () => {
+          const canvas = document.createElement('canvas')
+          const MAX_SIZE = 256
+          let width = img.width
+          let height = img.height
+
+          if (width > height) {
+            if (width > MAX_SIZE) {
+              height *= MAX_SIZE / width
+              width = MAX_SIZE
+            }
+          } else {
+            if (height > MAX_SIZE) {
+              width *= MAX_SIZE / height
+              height = MAX_SIZE
+            }
+          }
+
+          canvas.width = width
+          canvas.height = height
+          const ctx = canvas.getContext('2d')
+          ctx?.drawImage(img, 0, 0, width, height)
+
+          // 压缩并转为 base64
+          const avatarUrl = canvas.toDataURL('image/jpeg', 0.8)
+
+          await fetcher('/users/me/avatar', {
+            method: 'PATCH',
+            body: JSON.stringify({ avatarUrl })
+          })
+
+          await checkAuth()
+          setUploading(false)
+        }
+      }
+    } catch (err: any) {
+      alert(err.message || '上传头像失败')
+      setUploading(false)
+    } finally {
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+    }
+  }
 
   if (!user) return null
 
@@ -29,7 +92,18 @@ export const Profile = () => {
       <header className="glass p-12 rounded-3xl flex flex-col md:flex-row items-center md:items-start gap-8 relative overflow-hidden">
         <div className="absolute -top-40 -right-40 w-96 h-96 bg-primary/10 blur-3xl rounded-full pointer-events-none" />
         
-        <div className="relative group cursor-pointer w-32 h-32 rounded-full overflow-hidden border-4 border-background shadow-xl z-10 bg-muted/20">
+        <input 
+          type="file" 
+          accept="image/*" 
+          className="hidden" 
+          ref={fileInputRef} 
+          onChange={handleFileChange} 
+        />
+        
+        <div 
+          onClick={() => !uploading && fileInputRef.current?.click()}
+          className={`relative group cursor-pointer w-32 h-32 rounded-full overflow-hidden border-4 border-background shadow-xl z-10 bg-muted/20 ${uploading ? 'opacity-50' : ''}`}
+        >
           {user.profile?.avatarUrl ? (
             <img src={user.profile.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
           ) : (
@@ -38,7 +112,11 @@ export const Profile = () => {
             </div>
           )}
           <div className="absolute inset-0 bg-black/50 z-20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-            <Camera className="text-white" size={32} />
+            {uploading ? (
+              <Loader2 className="text-white animate-spin" size={32} />
+            ) : (
+              <Camera className="text-white" size={32} />
+            )}
           </div>
         </div>
 
