@@ -31,6 +31,17 @@ type AdminUser = {
   createdAt: string
 }
 
+const ACTION_MAP: Record<string, string> = {
+  'AUTH_REGISTER': '用户注册',
+  'AUTH_LOGIN': '用户登录',
+  'POST_CREATE': '发布文章',
+  'POST_UPDATE': '更新文章',
+  'POST_DELETE': '删除文章',
+  'POST_STATUS_UPDATE': '更新文章状态',
+  'COMMENT_CREATE': '发表评论',
+  'USER_ROLE_UPDATE': '修改用户权限',
+}
+
 export const Admin = () => {
   const { user } = useAuth()
   const [tab, setTab] = useState<'posts' | 'logs' | 'users'>('posts')
@@ -267,7 +278,7 @@ export const Admin = () => {
                     <div className="font-bold">
                       <span className="text-primary">{l.actor.username}</span>
                       <span className="mx-2 text-muted">•</span>
-                      <span>{l.action}</span>
+                      <span>{ACTION_MAP[l.action] || l.action}</span>
                     </div>
                     <div className="text-sm text-muted">
                       {l.detail ? l.detail : l.target ? `目标：${l.target}` : ''}
