@@ -34,9 +34,11 @@ type AdminUser = {
 const ACTION_MAP: Record<string, string> = {
   'AUTH_REGISTER': '用户注册',
   'AUTH_LOGIN': '用户登录',
-  'POST_CREATE': '发布文章',
+  'POST_CREATE': '创建文章',
   'POST_UPDATE': '更新文章',
   'POST_DELETE': '删除文章',
+  'POST_PUBLISH': '发布文章',
+  'POST_UNPUBLISH': '下架文章',
   'POST_STATUS_UPDATE': '更新文章状态',
   'COMMENT_CREATE': '发表评论',
   'USER_ROLE_UPDATE': '修改用户权限',
