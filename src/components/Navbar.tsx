@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useAuth } from '../store/auth'
-import { PenSquare, LogOut, User as UserIcon } from 'lucide-react'
+import { PenSquare, LogOut, User as UserIcon, Github } from 'lucide-react'
 import { useState, useRef, useEffect } from 'react'
 
 export const Navbar = () => {
@@ -31,6 +31,16 @@ export const Navbar = () => {
         </Link>
 
         <nav className="flex items-center gap-6">
+          <a 
+            href="http://192.168.10.248:10080" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 text-sm font-medium hover:text-primary transition-colors"
+          >
+            <Github size={16} />
+            我的仓库
+          </a>
+          
           {user ? (
             <>
               <Link to="/post/new" className="flex items-center gap-2 text-sm font-medium hover:text-primary transition-colors">
