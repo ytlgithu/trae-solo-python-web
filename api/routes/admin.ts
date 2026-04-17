@@ -164,4 +164,65 @@ router.get('/logs', async (req: Request, res: Response): Promise<void> => {
   }
 })
 
+router.get('/users', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const adminId = await getAdminUserId(req)
+    if (!adminId) {
+      res.status(403).json({ error: 'Forbidden' })
+      return
+    }
+
+    const users = await prisma.user.findMany({
+      select: { id: true, username: true, role: true, createdAt: true },
+      orderBy: { createdAt: 'desc' }
+    })
+
+    res.json(users)
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Server error'
+    res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Server error' : message })
+  }
+})
+
+router.patch('/users/:id/role', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const adminId = await getAdminUserId(req)
+    if (!adminId) {
+      res.status(403).json({ error: 'Forbidden' })
+      return
+    }
+
+    const { id } = req.params
+    const { role } = req.body
+
+    if (id === adminId) {
+      res.status(400).json({ error: '不能修改自己的权限' })
+      return
+    }
+
+    const targetUser = await prisma.user.findUnique({ where: { id } })
+    if (!targetUser) {
+      res.status(404).json({ error: 'User not found' })
+      return
+    }
+
+    const updated = await prisma.user.update({
+      where: { id },
+      data: { role }
+    })
+
+    await writeLog({
+      actorId: adminId,
+      action: 'USER_ROLE_UPDATE',
+      target: updated.id,
+      detail: `修改用户 [${targetUser.username}] 的角色为 ${role === 'ADMIN' ? '管理员' : '普通用户'}`
+    })
+
+    res.json(updated)
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Server error'
+    res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Server error' : message })
+  }
+})
+
 export default router

@@ -3,7 +3,7 @@ import { motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import { fetcher } from '../lib/api'
 import { useAuth } from '../store/auth'
-import { Shield, FileText, ScrollText } from 'lucide-react'
+import { Shield, FileText, ScrollText, Users } from 'lucide-react'
 
 type AdminPost = {
   id: string
@@ -24,12 +24,20 @@ type OperationLog = {
   actor: { username: string }
 }
 
+type AdminUser = {
+  id: string
+  username: string
+  role: string
+  createdAt: string
+}
+
 export const Admin = () => {
   const { user } = useAuth()
-  const [tab, setTab] = useState<'posts' | 'logs'>('posts')
+  const [tab, setTab] = useState<'posts' | 'logs' | 'users'>('posts')
   const [loading, setLoading] = useState(true)
   const [posts, setPosts] = useState<AdminPost[]>([])
   const [logs, setLogs] = useState<OperationLog[]>([])
+  const [users, setUsers] = useState<AdminUser[]>([])
   const [logPage, setLogPage] = useState(1)
   const [logTotalPages, setLogTotalPages] = useState(1)
   const [error, setError] = useState('')
@@ -48,11 +56,16 @@ export const Admin = () => {
     setLogTotalPages(data.totalPages || 1)
   }
 
+  const reloadUsers = async () => {
+    const data = await fetcher('/admin/users')
+    setUsers(data)
+  }
+
   useEffect(() => {
     if (!isAdmin) return
     setLoading(true)
     setError('')
-    Promise.all([reloadPosts(), reloadLogs(1)])
+    Promise.all([reloadPosts(), reloadLogs(1), reloadUsers()])
       .catch((e: any) => setError(e.message))
       .finally(() => setLoading(false))
   }, [isAdmin])
@@ -64,6 +77,25 @@ export const Admin = () => {
       body: JSON.stringify({ status: nextStatus }),
     })
     await reloadPosts()
+    if (tab === 'logs') await reloadLogs(1)
+  }
+
+  const toggleUserRole = async (targetUser: AdminUser) => {
+    if (targetUser.id === user?.id) {
+      alert('不能修改自己的权限')
+      return
+    }
+    const nextRole = targetUser.role === 'ADMIN' ? 'USER' : 'ADMIN'
+    try {
+      await fetcher(`/admin/users/${targetUser.id}/role`, {
+        method: 'PATCH',
+        body: JSON.stringify({ role: nextRole })
+      })
+      await reloadUsers()
+      if (tab === 'logs') await reloadLogs(1)
+    } catch (e: any) {
+      alert(e.message)
+    }
   }
 
   if (!isAdmin) {
@@ -81,18 +113,18 @@ export const Admin = () => {
       animate={{ opacity: 1, y: 0 }}
       className="max-w-6xl mx-auto space-y-8"
     >
-      <header className="glass p-10 rounded-3xl flex items-center justify-between gap-8">
+      <header className="glass p-10 rounded-3xl flex flex-col md:flex-row items-center justify-between gap-8">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
+          <div className="w-12 h-12 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
             <Shield />
           </div>
           <div>
             <h1 className="text-3xl font-black font-['Space_Grotesk']">管理后台</h1>
-            <p className="text-muted text-sm">文章管理与操作日志</p>
+            <p className="text-muted text-sm">文章、日志与用户管理</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <button
             onClick={() => setTab('posts')}
             className={`px-5 py-2 rounded-full text-sm font-bold transition-colors ${
@@ -102,7 +134,15 @@ export const Admin = () => {
             文章管理
           </button>
           <button
-            onClick={() => setTab('logs')}
+            onClick={() => setTab('users')}
+            className={`px-5 py-2 rounded-full text-sm font-bold transition-colors ${
+              tab === 'users' ? 'bg-foreground text-background dark:bg-white dark:text-black' : 'hover:bg-border/60'
+            }`}
+          >
+            用户管理
+          </button>
+          <button
+            onClick={() => { setTab('logs'); reloadLogs(1) }}
             className={`px-5 py-2 rounded-full text-sm font-bold transition-colors ${
               tab === 'logs' ? 'bg-foreground text-background dark:bg-white dark:text-black' : 'hover:bg-border/60'
             }`}
@@ -147,7 +187,7 @@ export const Admin = () => {
                     {p.publishedAt ? <span>发布：{new Date(p.publishedAt).toLocaleDateString()}</span> : null}
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 shrink-0">
                   <Link to={`/post/${p.slug}`} className="px-4 py-2 rounded-xl hover:bg-border/60 transition-colors text-sm font-bold">
                     查看
                   </Link>
@@ -168,6 +208,44 @@ export const Admin = () => {
             )}
           </div>
         </section>
+      ) : tab === 'users' ? (
+        <section className="glass p-10 rounded-3xl">
+          <div className="flex items-center justify-between mb-8">
+            <h2 className="text-2xl font-bold flex items-center gap-3">
+              <span className="w-6 h-1 bg-primary rounded-full" />
+              用户管理
+            </h2>
+            <button onClick={reloadUsers} className="text-sm font-bold text-primary hover:underline">刷新</button>
+          </div>
+
+          <div className="space-y-4">
+            {users.map((u) => (
+              <div key={u.id} className="bg-background/60 dark:bg-black/30 border border-border rounded-2xl p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-5">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-3">
+                    <Users size={18} className="text-primary" />
+                    <div className="text-lg font-bold">{u.username}</div>
+                    <span className={`px-2 py-0.5 rounded text-xs font-bold ${u.role === 'ADMIN' ? 'bg-primary/10 text-primary' : 'bg-muted/10 text-muted'}`}>
+                      {u.role === 'ADMIN' ? '管理员' : '普通用户'}
+                    </span>
+                  </div>
+                  <div className="text-sm text-muted">
+                    注册时间：{new Date(u.createdAt).toLocaleDateString()}
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
+                  <button
+                    onClick={() => toggleUserRole(u)}
+                    disabled={u.id === user?.id}
+                    className="px-4 py-2 rounded-xl bg-border/40 hover:bg-border/80 disabled:opacity-50 disabled:hover:bg-border/40 transition-colors text-sm font-bold"
+                  >
+                    {u.role === 'ADMIN' ? '取消管理员' : '设为管理员'}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
       ) : (
         <section className="glass p-10 rounded-3xl">
           <div className="flex items-center justify-between mb-8">
@@ -182,7 +260,7 @@ export const Admin = () => {
             {logs.map((l) => (
               <div key={l.id} className="bg-background/60 dark:bg-black/30 border border-border rounded-2xl p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
+                  <div className="w-9 h-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
                     <ScrollText size={18} />
                   </div>
                   <div>
@@ -196,7 +274,7 @@ export const Admin = () => {
                     </div>
                   </div>
                 </div>
-                <div className="text-xs text-muted">{new Date(l.createdAt).toLocaleString()}</div>
+                <div className="text-xs text-muted shrink-0">{new Date(l.createdAt).toLocaleString()}</div>
               </div>
             ))}
 
