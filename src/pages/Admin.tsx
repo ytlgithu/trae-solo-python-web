@@ -1,18 +1,9 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import { fetcher } from '../lib/api'
 import { useAuth } from '../store/auth'
-import { Check, EyeOff, Shield, FileText } from 'lucide-react'
-
-type AdminComment = {
-  id: string
-  content: string
-  status: string
-  createdAt: string
-  user: { id: string; username: string }
-  post: { id: string; title: string; slug: string }
-}
+import { Shield, FileText, ScrollText } from 'lucide-react'
 
 type AdminPost = {
   id: string
@@ -24,44 +15,47 @@ type AdminPost = {
   author: { id: string; username: string }
 }
 
+type OperationLog = {
+  id: string
+  action: string
+  target?: string | null
+  detail?: string | null
+  createdAt: string
+  actor: { username: string }
+}
+
 export const Admin = () => {
   const { user } = useAuth()
-  const [tab, setTab] = useState<'comments' | 'posts'>('comments')
+  const [tab, setTab] = useState<'posts' | 'logs'>('posts')
   const [loading, setLoading] = useState(true)
-  const [comments, setComments] = useState<AdminComment[]>([])
   const [posts, setPosts] = useState<AdminPost[]>([])
+  const [logs, setLogs] = useState<OperationLog[]>([])
+  const [logPage, setLogPage] = useState(1)
+  const [logTotalPages, setLogTotalPages] = useState(1)
   const [error, setError] = useState('')
 
   const isAdmin = user?.role === 'ADMIN'
-
-  const reloadComments = async () => {
-    const data = await fetcher('/admin/comments?status=PENDING')
-    setComments(data)
-  }
 
   const reloadPosts = async () => {
     const data = await fetcher('/admin/posts')
     setPosts(data)
   }
 
+  const reloadLogs = async (page: number) => {
+    const data = await fetcher(`/admin/logs?page=${page}`)
+    setLogs(data.items || [])
+    setLogPage(data.page || page)
+    setLogTotalPages(data.totalPages || 1)
+  }
+
   useEffect(() => {
     if (!isAdmin) return
     setLoading(true)
     setError('')
-    Promise.all([reloadComments(), reloadPosts()])
+    Promise.all([reloadPosts(), reloadLogs(1)])
       .catch((e: any) => setError(e.message))
       .finally(() => setLoading(false))
   }, [isAdmin])
-
-  const approve = async (id: string) => {
-    await fetcher(`/admin/comments/${id}/approve`, { method: 'POST' })
-    await reloadComments()
-  }
-
-  const hide = async (id: string) => {
-    await fetcher(`/admin/comments/${id}/hide`, { method: 'POST' })
-    await reloadComments()
-  }
 
   const togglePostStatus = async (post: AdminPost) => {
     const nextStatus = post.status === 'PUBLISHED' ? 'DRAFT' : 'PUBLISHED'
@@ -71,8 +65,6 @@ export const Admin = () => {
     })
     await reloadPosts()
   }
-
-  const pendingCount = useMemo(() => comments.length, [comments])
 
   if (!isAdmin) {
     return (
@@ -96,19 +88,11 @@ export const Admin = () => {
           </div>
           <div>
             <h1 className="text-3xl font-black font-['Space_Grotesk']">管理后台</h1>
-            <p className="text-muted text-sm">评论审核与文章管理</p>
+            <p className="text-muted text-sm">文章管理与操作日志</p>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
-          <button
-            onClick={() => setTab('comments')}
-            className={`px-5 py-2 rounded-full text-sm font-bold transition-colors ${
-              tab === 'comments' ? 'bg-foreground text-background dark:bg-white dark:text-black' : 'hover:bg-border/60'
-            }`}
-          >
-            待审评论 {pendingCount > 0 ? `(${pendingCount})` : ''}
-          </button>
           <button
             onClick={() => setTab('posts')}
             className={`px-5 py-2 rounded-full text-sm font-bold transition-colors ${
@@ -116,6 +100,14 @@ export const Admin = () => {
             }`}
           >
             文章管理
+          </button>
+          <button
+            onClick={() => setTab('logs')}
+            className={`px-5 py-2 rounded-full text-sm font-bold transition-colors ${
+              tab === 'logs' ? 'bg-foreground text-background dark:bg-white dark:text-black' : 'hover:bg-border/60'
+            }`}
+          >
+            操作日志
           </button>
         </div>
       </header>
@@ -128,55 +120,7 @@ export const Admin = () => {
 
       {loading ? (
         <div className="glass p-12 rounded-3xl text-center text-muted">Loading...</div>
-      ) : tab === 'comments' ? (
-        <section className="glass p-10 rounded-3xl">
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="text-2xl font-bold flex items-center gap-3">
-              <span className="w-6 h-1 bg-primary rounded-full" />
-              待审核评论
-            </h2>
-            <button onClick={reloadComments} className="text-sm font-bold text-primary hover:underline">刷新</button>
-          </div>
-
-          <div className="space-y-4">
-            {comments.map((c) => (
-              <div key={c.id} className="bg-background/60 dark:bg-black/30 border border-border rounded-2xl p-6">
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-3">
-                  <div className="text-sm text-muted">
-                    <span className="font-bold text-foreground">{c.user.username}</span>
-                    <span className="mx-2">•</span>
-                    <Link to={`/post/${c.post.slug}`} className="text-primary hover:underline">{c.post.title}</Link>
-                  </div>
-                  <div className="text-xs text-muted">{new Date(c.createdAt).toLocaleString()}</div>
-                </div>
-                <p className="text-foreground/90 leading-relaxed whitespace-pre-wrap">{c.content}</p>
-                <div className="flex gap-3 mt-6">
-                  <button
-                    onClick={() => approve(c.id)}
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-green-500/10 text-green-600 dark:text-green-500 hover:bg-green-500/15 transition-colors font-bold text-sm"
-                  >
-                    <Check size={16} />
-                    通过
-                  </button>
-                  <button
-                    onClick={() => hide(c.id)}
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-red-500/10 text-red-600 dark:text-red-500 hover:bg-red-500/15 transition-colors font-bold text-sm"
-                  >
-                    <EyeOff size={16} />
-                    隐藏
-                  </button>
-                </div>
-              </div>
-            ))}
-
-            {comments.length === 0 && (
-              <div className="text-center py-16 text-muted border-2 border-dashed border-border rounded-2xl">
-                暂无待审核评论
-              </div>
-            )}
-          </div>
-        </section>
-      ) : (
+      ) : tab === 'posts' ? (
         <section className="glass p-10 rounded-3xl">
           <div className="flex items-center justify-between mb-8">
             <h2 className="text-2xl font-bold flex items-center gap-3">
@@ -224,8 +168,66 @@ export const Admin = () => {
             )}
           </div>
         </section>
+      ) : (
+        <section className="glass p-10 rounded-3xl">
+          <div className="flex items-center justify-between mb-8">
+            <h2 className="text-2xl font-bold flex items-center gap-3">
+              <span className="w-6 h-1 bg-primary rounded-full" />
+              操作日志
+            </h2>
+            <button onClick={() => reloadLogs(logPage)} className="text-sm font-bold text-primary hover:underline">刷新</button>
+          </div>
+
+          <div className="space-y-3">
+            {logs.map((l) => (
+              <div key={l.id} className="bg-background/60 dark:bg-black/30 border border-border rounded-2xl p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
+                    <ScrollText size={18} />
+                  </div>
+                  <div>
+                    <div className="font-bold">
+                      <span className="text-primary">{l.actor.username}</span>
+                      <span className="mx-2 text-muted">•</span>
+                      <span>{l.action}</span>
+                    </div>
+                    <div className="text-sm text-muted">
+                      {l.detail ? l.detail : l.target ? `目标：${l.target}` : ''}
+                    </div>
+                  </div>
+                </div>
+                <div className="text-xs text-muted">{new Date(l.createdAt).toLocaleString()}</div>
+              </div>
+            ))}
+
+            {logs.length === 0 && (
+              <div className="text-center py-16 text-muted border-2 border-dashed border-border rounded-2xl">
+                暂无日志
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center justify-between mt-10">
+            <button
+              disabled={logPage <= 1}
+              onClick={() => reloadLogs(logPage - 1)}
+              className="px-4 py-2 rounded-xl hover:bg-border/60 disabled:opacity-50 disabled:hover:bg-transparent transition-colors text-sm font-bold"
+            >
+              上一页
+            </button>
+            <div className="text-sm text-muted">
+              第 {logPage} / {logTotalPages} 页（每页 20 条，最多保留 200 条）
+            </div>
+            <button
+              disabled={logPage >= logTotalPages}
+              onClick={() => reloadLogs(logPage + 1)}
+              className="px-4 py-2 rounded-xl hover:bg-border/60 disabled:opacity-50 disabled:hover:bg-transparent transition-colors text-sm font-bold"
+            >
+              下一页
+            </button>
+          </div>
+        </section>
       )}
     </motion.div>
   )
 }
-

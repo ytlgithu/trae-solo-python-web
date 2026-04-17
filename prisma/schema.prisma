@@ -16,6 +16,7 @@ model User {
   profile   Profile?
   posts     Post[]
   comments  Comment[]
+  operationLogs OperationLog[]
 }
 
 model Profile {
@@ -62,10 +63,20 @@ model Post {
 model Comment {
   id        String    @id @default(cuid())
   content   String
-  status    String    @default("PENDING") // PENDING, APPROVED, HIDDEN
+  status    String    @default("APPROVED") // APPROVED
   createdAt DateTime  @default(now())
   postId    String
   userId    String
   post      Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model OperationLog {
+  id        String   @id @default(cuid())
+  action    String
+  actorId   String
+  target    String?
+  detail    String?
+  createdAt DateTime @default(now())
+  actor     User     @relation(fields: [actorId], references: [id], onDelete: Cascade)
 }

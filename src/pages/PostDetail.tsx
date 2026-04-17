@@ -27,7 +27,9 @@ export const PostDetail = () => {
         body: JSON.stringify({ content: comment })
       })
       setComment('')
-      alert('评论提交成功，待审核后展示')
+      alert('评论已发布')
+      const updated = await fetcher(`/posts/${slug}`)
+      setPost(updated)
     } catch (err: any) {
       alert(err.message)
     } finally {

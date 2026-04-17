@@ -15,86 +15,26 @@ const getAdminUserId = async (req: Request): Promise<string | null> => {
   return user.id
 }
 
-router.get('/summary', async (req: Request, res: Response): Promise<void> => {
-  try {
-    const adminId = await getAdminUserId(req)
-    if (!adminId) {
-      res.status(403).json({ error: 'Forbidden' })
-      return
-    }
+const writeLog = async (params: { actorId: string; action: string; target?: string; detail?: string }) => {
+  await prisma.operationLog.create({
+    data: {
+      actorId: params.actorId,
+      action: params.action,
+      target: params.target,
+      detail: params.detail,
+    },
+  })
 
-    const pendingCommentsCount = await prisma.comment.count({ where: { status: 'PENDING' } })
-    res.json({ pendingCommentsCount })
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Server error'
-    res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Server error' : message })
+  const old = await prisma.operationLog.findMany({
+    orderBy: { createdAt: 'desc' },
+    skip: 200,
+    select: { id: true },
+  })
+
+  if (old.length > 0) {
+    await prisma.operationLog.deleteMany({ where: { id: { in: old.map((x) => x.id) } } })
   }
-})
-
-router.get('/comments', async (req: Request, res: Response): Promise<void> => {
-  try {
-    const adminId = await getAdminUserId(req)
-    if (!adminId) {
-      res.status(403).json({ error: 'Forbidden' })
-      return
-    }
-
-    const status = (req.query.status as string | undefined) ?? 'PENDING'
-    const comments = await prisma.comment.findMany({
-      where: { status },
-      orderBy: { createdAt: 'desc' },
-      include: {
-        user: { select: { id: true, username: true } },
-        post: { select: { id: true, title: true, slug: true } },
-      },
-    })
-
-    res.json(comments)
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Server error'
-    res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Server error' : message })
-  }
-})
-
-router.post('/comments/:id/approve', async (req: Request, res: Response): Promise<void> => {
-  try {
-    const adminId = await getAdminUserId(req)
-    if (!adminId) {
-      res.status(403).json({ error: 'Forbidden' })
-      return
-    }
-
-    const { id } = req.params
-    const updated = await prisma.comment.update({
-      where: { id },
-      data: { status: 'APPROVED' },
-    })
-    res.json(updated)
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Server error'
-    res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Server error' : message })
-  }
-})
-
-router.post('/comments/:id/hide', async (req: Request, res: Response): Promise<void> => {
-  try {
-    const adminId = await getAdminUserId(req)
-    if (!adminId) {
-      res.status(403).json({ error: 'Forbidden' })
-      return
-    }
-
-    const { id } = req.params
-    const updated = await prisma.comment.update({
-      where: { id },
-      data: { status: 'HIDDEN' },
-    })
-    res.json(updated)
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Server error'
-    res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Server error' : message })
-  }
-})
+}
 
 router.get('/posts', async (req: Request, res: Response): Promise<void> => {
   try {
@@ -148,6 +88,21 @@ router.patch('/posts/:id', async (req: Request, res: Response): Promise<void> =>
     }
 
     const updated = await prisma.post.update({ where: { id }, data })
+    if (typeof status === 'string') {
+      await writeLog({
+        actorId: adminId,
+        action: status === 'PUBLISHED' ? 'POST_PUBLISH' : status === 'DRAFT' ? 'POST_UNPUBLISH' : 'POST_UPDATE',
+        target: updated.id,
+        detail: updated.title,
+      })
+    } else {
+      await writeLog({
+        actorId: adminId,
+        action: 'POST_UPDATE',
+        target: updated.id,
+        detail: updated.title,
+      })
+    }
     res.json(updated)
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Server error'
@@ -164,7 +119,8 @@ router.delete('/posts/:id', async (req: Request, res: Response): Promise<void> =
     }
 
     const { id } = req.params
-    await prisma.post.delete({ where: { id } })
+    const deleted = await prisma.post.delete({ where: { id } })
+    await writeLog({ actorId: adminId, action: 'POST_DELETE', target: deleted.id, detail: deleted.title })
     res.json({ success: true })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Server error'
@@ -172,5 +128,40 @@ router.delete('/posts/:id', async (req: Request, res: Response): Promise<void> =
   }
 })
 
-export default router
+router.get('/logs', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const adminId = await getAdminUserId(req)
+    if (!adminId) {
+      res.status(403).json({ error: 'Forbidden' })
+      return
+    }
 
+    const pageRaw = Number(req.query.page ?? 1)
+    const page = Number.isFinite(pageRaw) && pageRaw > 0 ? Math.floor(pageRaw) : 1
+    const pageSize = 20
+    const skip = (page - 1) * pageSize
+
+    const [total, items] = await Promise.all([
+      prisma.operationLog.count(),
+      prisma.operationLog.findMany({
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: pageSize,
+        include: { actor: { select: { username: true } } },
+      }),
+    ])
+
+    res.json({
+      page,
+      pageSize,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / pageSize)),
+      items,
+    })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Server error'
+    res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Server error' : message })
+  }
+})
+
+export default router

@@ -57,7 +57,6 @@ router.get('/:slug', async (req: Request, res: Response): Promise<void> => {
         category: true,
         tags: true,
         comments: {
-          where: { status: 'APPROVED' },
           include: { user: { select: { username: true } } },
           orderBy: { createdAt: 'asc' }
         }
@@ -94,7 +93,7 @@ router.post('/:id/comments', async (req: Request, res: Response): Promise<void> 
         content,
         postId,
         userId: decoded.id,
-        status: 'PENDING'
+        status: 'APPROVED'
       }
     })
 
