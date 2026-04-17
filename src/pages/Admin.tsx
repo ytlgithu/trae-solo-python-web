@@ -29,6 +29,7 @@ type AdminUser = {
   username: string
   role: string
   createdAt: string
+  profile?: { avatarUrl: string | null } | null
 }
 
 const ACTION_MAP: Record<string, string> = {
@@ -244,14 +245,24 @@ export const Admin = () => {
               <div key={u.id} className="bg-background/60 dark:bg-black/30 border border-border rounded-2xl p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-5">
                 <div className="space-y-2">
                   <div className="flex items-center gap-3">
-                    <Users size={18} className="text-primary" />
-                    <div className="text-lg font-bold">{u.username}</div>
-                    <span className={`px-2 py-0.5 rounded text-xs font-bold ${u.role === 'ADMIN' ? 'bg-primary/10 text-primary' : 'bg-muted/10 text-muted'}`}>
-                      {u.role === 'ADMIN' ? '管理员' : '普通用户'}
-                    </span>
-                  </div>
-                  <div className="text-sm text-muted">
-                    注册时间：{new Date(u.createdAt).toLocaleDateString()}
+                    {u.profile?.avatarUrl ? (
+                      <img src={u.profile.avatarUrl} alt="avatar" className="w-10 h-10 rounded-full object-cover border-2 border-primary/20 shrink-0" />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary border border-primary/20 shrink-0">
+                        <Users size={18} />
+                      </div>
+                    )}
+                    <div>
+                      <div className="text-lg font-bold flex items-center gap-2">
+                        {u.username}
+                        <span className={`px-2 py-0.5 rounded text-xs font-bold ${u.role === 'ADMIN' ? 'bg-primary/10 text-primary' : 'bg-muted/10 text-muted'}`}>
+                          {u.role === 'ADMIN' ? '管理员' : '普通用户'}
+                        </span>
+                      </div>
+                      <div className="text-sm text-muted">
+                        注册时间：{new Date(u.createdAt).toLocaleDateString()}
+                      </div>
+                    </div>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 shrink-0">
