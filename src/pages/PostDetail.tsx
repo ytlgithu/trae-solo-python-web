@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { marked } from 'marked'
 import { fetcher } from '../lib/api'
 import { useAuth } from '../store/auth'
 import { Calendar, Tag, Send } from 'lucide-react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 export const PostDetail = () => {
   const { slug } = useParams()
@@ -69,10 +70,11 @@ export const PostDetail = () => {
         </div>
       )}
 
-      <div 
-        className="prose prose-lg dark:prose-invert prose-headings:font-['Space_Grotesk'] prose-a:text-primary max-w-none"
-        dangerouslySetInnerHTML={{ __html: marked(post.content) }}
-      />
+      <div className="prose prose-lg dark:prose-invert max-w-none w-full break-words prose-headings:font-['Space_Grotesk'] prose-headings:font-bold prose-a:text-primary hover:prose-a:text-primary/80 prose-img:rounded-xl prose-img:shadow-lg prose-pre:bg-foreground prose-pre:text-background dark:prose-pre:bg-background dark:prose-pre:text-foreground prose-pre:border prose-pre:border-border mt-8">
+        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+          {post.content}
+        </ReactMarkdown>
+      </div>
 
       <div className="flex flex-wrap gap-2 mt-16 pt-8 border-t border-border">
         {post.tags?.map((tag: any) => (
