@@ -15,6 +15,7 @@ export const PostDetail = () => {
   const [post, setPost] = useState<any>(null)
   const [comment, setComment] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [activeId, setActiveId] = useState<string>('')
 
   const headings = useMemo(() => {
     if (!post?.content) return []
@@ -30,6 +31,32 @@ export const PostDetail = () => {
   useEffect(() => {
     fetcher(`/posts/${slug}`).then(setPost)
   }, [slug])
+
+  useEffect(() => {
+    const handleScroll = () => {
+      let currentActiveId = ''
+      for (const heading of headings) {
+        const element = document.getElementById(heading.id)
+        if (element) {
+          const rect = element.getBoundingClientRect()
+          // 150px offset to trigger slightly before it hits the top
+          if (rect.top < 150) {
+            currentActiveId = heading.id
+          }
+        }
+      }
+      if (currentActiveId) {
+        setActiveId(currentActiveId)
+      } else if (headings.length > 0) {
+        // If scrolled to top, set the first heading as active
+        setActiveId(headings[0].id)
+      }
+    }
+
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    handleScroll() // Initialize on mount
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [headings])
 
   const submitComment = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -75,14 +102,35 @@ export const PostDetail = () => {
                 <span className="w-1 h-4 bg-primary rounded-full" />
                 文章目录
               </h3>
-              <ul className="space-y-3 text-sm text-muted">
-                {headings.map((h, i) => (
-                  <li key={i} style={{ paddingLeft: `${(h.level - 1) * 12}px` }}>
-                    <a href={`#${h.id}`} className="hover:text-primary transition-colors block truncate" title={h.text}>
-                      {h.text}
-                    </a>
-                  </li>
-                ))}
+              <ul className="space-y-3 text-sm text-muted relative">
+                {headings.map((h, i) => {
+                  const isActive = activeId === h.id
+                  return (
+                    <li key={i} style={{ paddingLeft: `${(h.level - 1) * 12}px` }} className="relative">
+                      {isActive && (
+                        <motion.div 
+                          layoutId="activeTOC"
+                          className="absolute left-[-24px] top-1/2 -translate-y-1/2 w-1.5 h-1.5 bg-primary rounded-full"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          transition={{ duration: 0.2 }}
+                        />
+                      )}
+                      <a 
+                        href={`#${h.id}`} 
+                        onClick={() => setActiveId(h.id)}
+                        className={`block truncate transition-all duration-200 ${
+                          isActive 
+                            ? 'text-primary font-bold scale-[1.02] origin-left' 
+                            : 'hover:text-primary'
+                        }`} 
+                        title={h.text}
+                      >
+                        {h.text}
+                      </a>
+                    </li>
+                  )
+                })}
               </ul>
             </div>
           )}
