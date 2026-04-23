@@ -20,9 +20,9 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
 
     if (q) {
       where.OR = [
-        { title: { contains: String(q) } },
-        { content: { contains: String(q) } },
-        { excerpt: { contains: String(q) } }
+        { title: { contains: String(q), mode: 'insensitive' } },
+        { content: { contains: String(q), mode: 'insensitive' } },
+        { excerpt: { contains: String(q), mode: 'insensitive' } }
       ]
     }
 
@@ -46,8 +46,7 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
 
     res.json(posts)
   } catch (error) {
-    console.error('Fetch posts error:', error)
-    res.status(500).json({ error: 'Failed to fetch posts', details: String(error) })
+    res.status(500).json({ error: 'Failed to fetch posts' })
   }
 })
 
