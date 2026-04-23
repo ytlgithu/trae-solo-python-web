@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import { fetcher } from '../lib/api'
 import { useAuth } from '../store/auth'
+import { stripMarkdown } from '../lib/utils'
 import { Calendar, Tag } from 'lucide-react'
 
 export const Home = () => {
@@ -99,8 +100,8 @@ export const Home = () => {
                 <h3 className="text-3xl font-bold mb-4 group-hover:text-primary transition-colors font-['Space_Grotesk']">
                   {post.title}
                 </h3>
-                <p className="text-muted leading-relaxed mb-6">
-                  {post.excerpt || post.content.substring(0, 150) + '...'}
+                <p className="text-muted leading-relaxed mb-6 line-clamp-3">
+                  {post.excerpt || stripMarkdown(post.content).substring(0, 150) + '...'}
                 </p>
                 
                 <div className="flex gap-2 relative z-20">

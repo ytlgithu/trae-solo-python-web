@@ -25,9 +25,19 @@ dotenv.config()
 
 const app: express.Application = express()
 
-app.use(cors())
-app.use(express.json({ limit: '10mb' }))
-app.use(express.urlencoded({ extended: true, limit: '10mb' }))
+// Set up CORS - restrict in production
+const corsOptions = {
+  origin: process.env.NODE_ENV === 'production' 
+    ? process.env.FRONTEND_URL || 'https://your-production-domain.com' 
+    : '*',
+  credentials: true,
+}
+
+app.use(cors(corsOptions))
+
+// Strict payload limits
+app.use(express.json({ limit: '100kb' }))
+app.use(express.urlencoded({ extended: true, limit: '100kb' }))
 
 /**
  * API Routes

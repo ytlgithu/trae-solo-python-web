@@ -4,7 +4,7 @@ import prisma from '../db.js'
 import { writeLog } from '../operationLog.js'
 
 const router = Router()
-const JWT_SECRET = process.env.JWT_SECRET || 'secret_key'
+const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_key_do_not_use_in_prod'
 
 const getAdminUserId = async (req: Request): Promise<string | null> => {
   const token = req.headers.authorization?.split(' ')[1]
@@ -17,8 +17,11 @@ const getAdminUserId = async (req: Request): Promise<string | null> => {
 }
 
 const isSuperAdmin = async (userId: string): Promise<boolean> => {
-  const user = await prisma.user.findUnique({ where: { id: userId } })
-  return Boolean(user && user.username === 'admin')
+  // First user created is the super admin
+  const firstUser = await prisma.user.findFirst({
+    orderBy: { createdAt: 'asc' },
+  })
+  return Boolean(firstUser && firstUser.id === userId)
 }
 
 router.get('/posts', async (req: Request, res: Response): Promise<void> => {

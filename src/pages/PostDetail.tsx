@@ -8,6 +8,8 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeSlug from 'rehype-slug'
 import GithubSlugger from 'github-slugger'
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
 
 export const PostDetail = () => {
   const { slug } = useParams()
@@ -167,8 +169,30 @@ export const PostDetail = () => {
             </div>
           )}
 
-          <div className="prose prose-lg dark:prose-invert max-w-none w-full break-words prose-headings:font-['Space_Grotesk'] prose-headings:font-bold prose-headings:scroll-mt-24 prose-a:text-primary hover:prose-a:text-primary/80 prose-img:rounded-xl prose-img:shadow-lg prose-pre:bg-foreground prose-pre:text-background dark:prose-pre:bg-background dark:prose-pre:text-foreground prose-pre:border prose-pre:border-border mt-8">
-            <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSlug]}>
+          <div className="prose prose-lg dark:prose-invert max-w-none w-full break-words prose-headings:font-['Space_Grotesk'] prose-headings:font-bold prose-headings:scroll-mt-24 prose-a:text-primary hover:prose-a:text-primary/80 prose-img:rounded-xl prose-img:shadow-lg mt-8">
+            <ReactMarkdown 
+              remarkPlugins={[remarkGfm]} 
+              rehypePlugins={[rehypeSlug]}
+              components={{
+                code({node, inline, className, children, ...props}: any) {
+                  const match = /language-(\w+)/.exec(className || '')
+                  return !inline && match ? (
+                    <SyntaxHighlighter
+                      {...props}
+                      children={String(children).replace(/\n$/, '')}
+                      style={vscDarkPlus}
+                      language={match[1]}
+                      PreTag="div"
+                      className="rounded-xl my-4 text-sm"
+                    />
+                  ) : (
+                    <code {...props} className={`${className || ''} bg-muted px-1.5 py-0.5 rounded-md font-mono text-sm`}>
+                      {children}
+                    </code>
+                  )
+                }
+              }}
+            >
               {post.content}
             </ReactMarkdown>
           </div>
