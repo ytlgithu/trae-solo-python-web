@@ -3,7 +3,7 @@ import { motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import { fetcher } from '../lib/api'
 import { useAuth } from '../store/auth'
-import { Shield, FileText, ScrollText, Users } from 'lucide-react'
+import { Shield, FileText, ScrollText, Users, Tag as TagIcon, FolderTree } from 'lucide-react'
 
 type AdminPost = {
   id: string
@@ -13,6 +13,18 @@ type AdminPost = {
   createdAt: string
   publishedAt: string | null
   author: { id: string; username: string }
+}
+
+type AdminCategory = {
+  id: string
+  name: string
+  slug: string
+}
+
+type AdminTag = {
+  id: string
+  name: string
+  slug: string
 }
 
 type OperationLog = {
@@ -47,11 +59,15 @@ const ACTION_MAP: Record<string, string> = {
 
 export const Admin = () => {
   const { user } = useAuth()
-  const [tab, setTab] = useState<'posts' | 'logs' | 'users'>('posts')
+  const [tab, setTab] = useState<'posts' | 'logs' | 'users' | 'taxonomy'>('posts')
   const [loading, setLoading] = useState(true)
   const [posts, setPosts] = useState<AdminPost[]>([])
   const [logs, setLogs] = useState<OperationLog[]>([])
   const [users, setUsers] = useState<AdminUser[]>([])
+  
+  const [categories, setCategories] = useState<AdminCategory[]>([])
+  const [tags, setTags] = useState<AdminTag[]>([])
+
   const [logPage, setLogPage] = useState(1)
   const [logTotalPages, setLogTotalPages] = useState(1)
   const [error, setError] = useState('')
@@ -75,11 +91,20 @@ export const Admin = () => {
     setUsers(data)
   }
 
+  const reloadTaxonomy = async () => {
+    const [cats, tgs] = await Promise.all([
+      fetcher('/posts/categories'),
+      fetcher('/posts/tags')
+    ])
+    setCategories(cats)
+    setTags(tgs)
+  }
+
   useEffect(() => {
     if (!isAdmin) return
     setLoading(true)
     setError('')
-    Promise.all([reloadPosts(), reloadLogs(1), reloadUsers()])
+    Promise.all([reloadPosts(), reloadLogs(1), reloadUsers(), reloadTaxonomy()])
       .catch((e: any) => setError(e.message))
       .finally(() => setLoading(false))
   }, [isAdmin])
@@ -115,6 +140,54 @@ export const Admin = () => {
       })
       await reloadUsers()
       if (tab === 'logs') await reloadLogs(1)
+    } catch (e: any) {
+      alert(e.message)
+    }
+  }
+
+  const handleDeleteCategory = async (id: string) => {
+    if (!confirm('确定要删除这个分类吗？这会将该分类下文章的分类置空。')) return
+    try {
+      await fetcher(`/admin/categories/${id}`, { method: 'DELETE' })
+      await reloadTaxonomy()
+    } catch (e: any) {
+      alert(e.message)
+    }
+  }
+
+  const handleUpdateCategory = async (id: string, oldName: string) => {
+    const newName = prompt('输入新的分类名称', oldName)
+    if (!newName || newName === oldName) return
+    try {
+      await fetcher(`/admin/categories/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ name: newName })
+      })
+      await reloadTaxonomy()
+    } catch (e: any) {
+      alert(e.message)
+    }
+  }
+
+  const handleUpdateTag = async (id: string, oldName: string) => {
+    const newName = prompt('输入新的标签名称', oldName)
+    if (!newName || newName === oldName) return
+    try {
+      await fetcher(`/admin/tags/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ name: newName })
+      })
+      await reloadTaxonomy()
+    } catch (e: any) {
+      alert(e.message)
+    }
+  }
+
+  const handleDeleteTag = async (id: string) => {
+    if (!confirm('确定要删除这个标签吗？')) return
+    try {
+      await fetcher(`/admin/tags/${id}`, { method: 'DELETE' })
+      await reloadTaxonomy()
     } catch (e: any) {
       alert(e.message)
     }
@@ -162,6 +235,14 @@ export const Admin = () => {
             }`}
           >
             用户管理
+          </button>
+          <button
+            onClick={() => { setTab('taxonomy'); reloadTaxonomy() }}
+            className={`px-5 py-2 rounded-full text-sm font-bold transition-colors ${
+              tab === 'taxonomy' ? 'bg-foreground text-background dark:bg-white dark:text-black' : 'hover:bg-border/60'
+            }`}
+          >
+            分类/标签管理
           </button>
           <button
             onClick={() => { setTab('logs'); reloadLogs(1) }}
@@ -247,7 +328,56 @@ export const Admin = () => {
                   <div className="flex items-center gap-3">
                     {u.profile?.avatarUrl ? (
                       <img src={u.profile.avatarUrl} alt="avatar" className="w-10 h-10 rounded-full object-cover border-2 border-primary/20 shrink-0" />
-                    ) : (
+                    ) : tab === 'taxonomy' ? (
+        <section className="glass p-10 rounded-3xl space-y-12">
+          {/* Categories */}
+          <div>
+            <div className="flex items-center justify-between mb-8">
+              <h2 className="text-2xl font-bold flex items-center gap-3">
+                <span className="w-6 h-1 bg-primary rounded-full" />
+                <FolderTree className="text-primary" />
+                分类管理
+              </h2>
+              <button onClick={reloadTaxonomy} className="text-sm font-bold text-primary hover:underline">刷新</button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {categories.map(c => (
+                <div key={c.id} className="bg-background/60 dark:bg-black/30 border border-border rounded-xl p-4 flex items-center justify-between group">
+                  <span className="font-bold">{c.name}</span>
+                  <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
+                    <button onClick={() => handleUpdateCategory(c.id, c.name)} className="text-sm text-primary hover:underline">编辑</button>
+                    <button onClick={() => handleDeleteCategory(c.id)} className="text-sm text-red-500 hover:underline">删除</button>
+                  </div>
+                </div>
+              ))}
+              {categories.length === 0 && <div className="text-muted text-sm col-span-full">暂无分类</div>}
+            </div>
+          </div>
+
+          {/* Tags */}
+          <div>
+            <div className="flex items-center justify-between mb-8">
+              <h2 className="text-2xl font-bold flex items-center gap-3">
+                <span className="w-6 h-1 bg-primary rounded-full" />
+                <TagIcon className="text-primary" />
+                标签管理
+              </h2>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              {tags.map(t => (
+                <div key={t.id} className="bg-background/60 dark:bg-black/30 border border-border rounded-full pl-4 pr-2 py-2 flex items-center gap-3 group">
+                  <span className="text-sm font-bold">{t.name}</span>
+                  <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 bg-background/80 rounded-full px-2">
+                    <button onClick={() => handleUpdateTag(t.id, t.name)} className="text-xs text-primary hover:underline px-1">改</button>
+                    <button onClick={() => handleDeleteTag(t.id)} className="text-xs text-red-500 hover:underline px-1">删</button>
+                  </div>
+                </div>
+              ))}
+              {tags.length === 0 && <div className="text-muted text-sm w-full">暂无标签</div>}
+            </div>
+          </div>
+        </section>
+      ) : (
                       <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary border border-primary/20 shrink-0">
                         <Users size={18} />
                       </div>

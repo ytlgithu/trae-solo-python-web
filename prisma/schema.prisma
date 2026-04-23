@@ -29,7 +29,7 @@ model Profile {
 
 model Category {
   id        String   @id @default(cuid())
-  name      String
+  name      String   @unique
   slug      String   @unique
   createdAt DateTime @default(now())
   posts     Post[]
@@ -37,7 +37,7 @@ model Category {
 
 model Tag {
   id        String   @id @default(cuid())
-  name      String
+  name      String   @unique
   slug      String   @unique
   posts     Post[]   @relation("PostTags")
 }

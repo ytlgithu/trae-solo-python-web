@@ -1,5 +1,6 @@
 import { Router, type Request, type Response } from 'express'
 import jwt from 'jsonwebtoken'
+import GithubSlugger from 'github-slugger'
 import prisma from '../db.js'
 import { writeLog } from '../operationLog.js'
 
@@ -226,6 +227,86 @@ router.patch('/users/:id/role', async (req: Request, res: Response): Promise<voi
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Server error'
     res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Server error' : message })
+  }
+})
+
+// Update Category
+router.patch('/categories/:id', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const adminId = await getAdminUserId(req)
+    if (!adminId) {
+      res.status(403).json({ error: 'Forbidden' })
+      return
+    }
+    const { id } = req.params
+    const { name } = req.body
+    if (!name) {
+      res.status(400).json({ error: '分类名称不能为空' })
+      return
+    }
+    const updated = await prisma.category.update({
+      where: { id },
+      data: { name: name.trim(), slug: new GithubSlugger().slug(name.trim()) || Date.now().toString() }
+    })
+    res.json(updated)
+  } catch (error) {
+    res.status(500).json({ error: 'Server error' })
+  }
+})
+
+// Delete Category
+router.delete('/categories/:id', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const adminId = await getAdminUserId(req)
+    if (!adminId) {
+      res.status(403).json({ error: 'Forbidden' })
+      return
+    }
+    const { id } = req.params
+    await prisma.category.delete({ where: { id } })
+    res.json({ success: true })
+  } catch (error) {
+    res.status(500).json({ error: 'Server error' })
+  }
+})
+
+// Update Tag
+router.patch('/tags/:id', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const adminId = await getAdminUserId(req)
+    if (!adminId) {
+      res.status(403).json({ error: 'Forbidden' })
+      return
+    }
+    const { id } = req.params
+    const { name } = req.body
+    if (!name) {
+      res.status(400).json({ error: '标签名称不能为空' })
+      return
+    }
+    const updated = await prisma.tag.update({
+      where: { id },
+      data: { name: name.trim(), slug: new GithubSlugger().slug(name.trim()) || Date.now().toString() }
+    })
+    res.json(updated)
+  } catch (error) {
+    res.status(500).json({ error: 'Server error' })
+  }
+})
+
+// Delete Tag
+router.delete('/tags/:id', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const adminId = await getAdminUserId(req)
+    if (!adminId) {
+      res.status(403).json({ error: 'Forbidden' })
+      return
+    }
+    const { id } = req.params
+    await prisma.tag.delete({ where: { id } })
+    res.json({ success: true })
+  } catch (error) {
+    res.status(500).json({ error: 'Server error' })
   }
 })
 

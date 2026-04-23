@@ -211,17 +211,16 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
         publishedAt: status === 'PUBLISHED' ? new Date() : null,
         category: category ? {
           connectOrCreate: {
-            where: { slug: new GithubSlugger().slug(category) },
-            create: { name: category, slug: new GithubSlugger().slug(category) }
+            where: { name: category.trim() },
+            create: { name: category.trim(), slug: new GithubSlugger().slug(category.trim()) || Date.now().toString() }
           }
         } : undefined,
         tags: tags ? {
           connectOrCreate: tags.split(',').map((t: string) => {
             const trimmed = t.trim()
-            const slugged = new GithubSlugger().slug(trimmed)
             return {
-              where: { slug: slugged },
-              create: { name: trimmed, slug: slugged }
+              where: { name: trimmed },
+              create: { name: trimmed, slug: new GithubSlugger().slug(trimmed) || Date.now().toString() }
             }
           })
         } : undefined
@@ -271,18 +270,17 @@ router.patch('/:id', async (req: Request, res: Response): Promise<void> => {
         publishedAt: status === 'PUBLISHED' && !existing.publishedAt ? new Date() : existing.publishedAt,
         category: category ? {
           connectOrCreate: {
-            where: { slug: new GithubSlugger().slug(category) },
-            create: { name: category, slug: new GithubSlugger().slug(category) }
+            where: { name: category.trim() },
+            create: { name: category.trim(), slug: new GithubSlugger().slug(category.trim()) || Date.now().toString() }
           }
         } : undefined,
         tags: tags ? {
           set: [],
           connectOrCreate: tags.split(',').map((t: string) => {
             const trimmed = t.trim()
-            const slugged = new GithubSlugger().slug(trimmed)
             return {
-              where: { slug: slugged },
-              create: { name: trimmed, slug: slugged }
+              where: { name: trimmed },
+              create: { name: trimmed, slug: new GithubSlugger().slug(trimmed) || Date.now().toString() }
             }
           })
         } : undefined
