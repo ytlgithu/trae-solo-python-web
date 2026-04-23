@@ -51,9 +51,10 @@ app.use('/api/admin', adminRoutes)
  * error handler middleware
  */
 app.use('/api', (error: Error, req: Request, res: Response, next: NextFunction) => {
+  console.error('Global API Error:', error)
   res.status(500).json({
     success: false,
-    error: 'Server internal error',
+    error: error.message || 'Server internal error',
   })
 })
 

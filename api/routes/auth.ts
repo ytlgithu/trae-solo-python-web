@@ -83,7 +83,8 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
     const token = jwt.sign({ id: user.id, role, username: user.username }, ACTIVE_JWT_SECRET, { expiresIn: '7d' })
     res.json({ token, user: { id: user.id, username: user.username, role } })
   } catch (error) {
-    res.status(500).json({ error: '服务器错误' })
+    console.error('Login error:', error)
+    res.status(500).json({ error: '服务器错误', details: String(error) })
   }
 })
 
