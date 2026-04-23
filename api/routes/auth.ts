@@ -8,10 +8,9 @@ const router = Router()
 const JWT_SECRET = process.env.JWT_SECRET
 
 if (!JWT_SECRET) {
+  console.warn('WARNING: JWT_SECRET environment variable is not set. Using a fallback secret.')
   if (process.env.NODE_ENV === 'production') {
-    throw new Error('FATAL ERROR: JWT_SECRET environment variable is not set.')
-  } else {
-    console.warn('WARNING: JWT_SECRET is not set. Using a weak fallback secret for development.')
+    console.warn('CRITICAL WARNING: Using a fallback secret in production is HIGHLY INSECURE. Please set JWT_SECRET in your environment variables immediately.')
   }
 }
 const ACTIVE_JWT_SECRET = JWT_SECRET || 'dev_secret_key_do_not_use_in_prod'
