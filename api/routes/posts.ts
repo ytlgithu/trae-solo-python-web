@@ -8,6 +8,56 @@ import { writeLog } from '../operationLog.js'
 const router = Router()
 const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_key_do_not_use_in_prod'
 
+// Get all categories
+router.get('/categories', async (req: Request, res: Response): Promise<void> => {
+  try {
+    let categories = await prisma.category.findMany({
+      orderBy: { name: 'asc' }
+    })
+    
+    // Auto-seed if empty
+    if (categories.length === 0) {
+      const defaultCategories = ['技术分享', '随笔生活', '读书笔记', '项目复盘', '行业动态']
+      const slugger = new GithubSlugger()
+      for (const name of defaultCategories) {
+        await prisma.category.create({
+          data: { name, slug: slugger.slug(name) }
+        })
+      }
+      categories = await prisma.category.findMany({ orderBy: { name: 'asc' } })
+    }
+    
+    res.json(categories)
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch categories' })
+  }
+})
+
+// Get all tags
+router.get('/tags', async (req: Request, res: Response): Promise<void> => {
+  try {
+    let tags = await prisma.tag.findMany({
+      orderBy: { name: 'asc' }
+    })
+    
+    // Auto-seed if empty
+    if (tags.length === 0) {
+      const defaultTags = ['React', 'Node.js', 'TypeScript', 'Vue', 'Next.js', 'Python', 'Go', 'Rust', 'Docker', 'Kubernetes', '前端', '后端', '全栈', '面试', '算法', 'AI']
+      const slugger = new GithubSlugger()
+      for (const name of defaultTags) {
+        await prisma.tag.create({
+          data: { name, slug: slugger.slug(name) }
+        })
+      }
+      tags = await prisma.tag.findMany({ orderBy: { name: 'asc' } })
+    }
+
+    res.json(tags)
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch tags' })
+  }
+})
+
 // Get all published posts
 router.get('/', async (req: Request, res: Response): Promise<void> => {
   try {
