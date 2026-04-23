@@ -4,6 +4,8 @@ import prisma from '../db.js'
 
 const router = Router()
 
+const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_key_do_not_use_in_prod'
+
 // Get my posts
 router.get('/me/posts', async (req: Request, res: Response): Promise<void> => {
   try {
@@ -13,7 +15,7 @@ router.get('/me/posts', async (req: Request, res: Response): Promise<void> => {
       return
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret_key') as { id: string }
+    const decoded = jwt.verify(token, JWT_SECRET) as { id: string }
     
     const posts = await prisma.post.findMany({
       where: { authorId: decoded.id },
@@ -36,7 +38,7 @@ router.patch('/me/avatar', async (req: Request, res: Response): Promise<void> =>
       return
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret_key') as { id: string }
+    const decoded = jwt.verify(token, JWT_SECRET) as { id: string }
     const { avatarUrl } = req.body
 
     const profile = await prisma.profile.upsert({
