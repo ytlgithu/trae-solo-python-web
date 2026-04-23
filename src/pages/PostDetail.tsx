@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { fetcher } from '../lib/api'
 import { useAuth } from '../store/auth'
-import { Calendar, Tag, Send, ArrowLeft } from 'lucide-react'
+import { Calendar, Tag, Send, ArrowLeft, Copy, Check } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeSlug from 'rehype-slug'
@@ -92,7 +92,7 @@ export const PostDetail = () => {
     >
       {/* Left Sidebar: TOC */}
       <aside className="hidden lg:block w-64 shrink-0">
-        <div className="sticky top-24 space-y-8">
+        <div className="sticky top-24 space-y-8 max-h-[calc(100vh-6rem)] overflow-y-auto pb-8 scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
           <Link to="/" className="inline-flex items-center gap-2 text-muted hover:text-foreground transition-colors">
             <ArrowLeft size={20} />
             返回首页
@@ -176,16 +176,39 @@ export const PostDetail = () => {
               components={{
                 code({node, inline, className, children, ...props}: any) {
                   const match = /language-(\w+)/.exec(className || '')
-                  return !inline && match ? (
-                    <SyntaxHighlighter
-                      {...props}
-                      children={String(children).replace(/\n$/, '')}
-                      style={vscDarkPlus}
-                      language={match[1]}
-                      PreTag="div"
-                      className="rounded-xl my-4 text-sm"
-                    />
-                  ) : (
+                  if (!inline && match) {
+                    const codeString = String(children).replace(/\n$/, '')
+                    return (
+                      <div className="relative group my-4 rounded-xl overflow-hidden bg-[#1E1E1E]">
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(codeString)
+                            const btn = document.getElementById(`copy-${codeString.substring(0, 10)}`)
+                            if (btn) {
+                              btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-green-500"><polyline points="20 6 9 17 4 12"></polyline></svg>'
+                              setTimeout(() => {
+                                btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>'
+                              }, 2000)
+                            }
+                          }}
+                          id={`copy-${codeString.substring(0, 10)}`}
+                          className="absolute right-2 top-2 p-2 bg-white/10 hover:bg-white/20 text-white/70 hover:text-white rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-200 z-10"
+                          title="复制代码"
+                        >
+                          <Copy size={16} />
+                        </button>
+                        <SyntaxHighlighter
+                          {...props}
+                          children={codeString}
+                          style={vscDarkPlus}
+                          language={match[1]}
+                          PreTag="div"
+                          className="!my-0 !bg-transparent text-sm"
+                        />
+                      </div>
+                    )
+                  }
+                  return (
                     <code {...props} className={`${className || ''} bg-muted px-1.5 py-0.5 rounded-md font-mono text-sm`}>
                       {children}
                     </code>
