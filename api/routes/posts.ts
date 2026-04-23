@@ -1,25 +1,28 @@
 import { Router, type Request, type Response } from 'express'
 import jwt from 'jsonwebtoken'
+import { Prisma } from '@prisma/client'
+import GithubSlugger from 'github-slugger'
 import prisma from '../db.js'
 import { writeLog } from '../operationLog.js'
 
 const router = Router()
+const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_key_do_not_use_in_prod'
 
 // Get all published posts
 router.get('/', async (req: Request, res: Response): Promise<void> => {
   try {
     const { q, category, tag } = req.query
 
-    const where: any = {
+    const where: Prisma.PostWhereInput = {
       status: 'PUBLISHED',
       publishedAt: { lte: new Date() }
     }
 
     if (q) {
       where.OR = [
-        { title: { contains: String(q) } },
-        { content: { contains: String(q) } },
-        { excerpt: { contains: String(q) } }
+        { title: { contains: String(q), mode: 'insensitive' } },
+        { content: { contains: String(q), mode: 'insensitive' } },
+        { excerpt: { contains: String(q), mode: 'insensitive' } }
       ]
     }
 
@@ -110,7 +113,7 @@ router.post('/:id/comments', async (req: Request, res: Response): Promise<void> 
     const { id: postId } = req.params
     const { content } = req.body
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret_key') as { id: string }
+    const decoded = jwt.verify(token, JWT_SECRET) as { id: string }
     
     const comment = await prisma.comment.create({
       data: {
@@ -144,7 +147,7 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
       return
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret_key') as { id: string }
+    const decoded = jwt.verify(token, JWT_SECRET) as { id: string }
     const { title, slug, excerpt, content, status, category, tags } = req.body
 
     const post = await prisma.post.create({
@@ -158,15 +161,19 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
         publishedAt: status === 'PUBLISHED' ? new Date() : null,
         category: category ? {
           connectOrCreate: {
-            where: { slug: category.toLowerCase().replace(/[\s\W-]+/g, '-') },
-            create: { name: category, slug: category.toLowerCase().replace(/[\s\W-]+/g, '-') }
+            where: { slug: new GithubSlugger().slug(category) },
+            create: { name: category, slug: new GithubSlugger().slug(category) }
           }
         } : undefined,
         tags: tags ? {
-          connectOrCreate: tags.split(',').map((t: string) => ({
-            where: { slug: t.trim().toLowerCase().replace(/[\s\W-]+/g, '-') },
-            create: { name: t.trim(), slug: t.trim().toLowerCase().replace(/[\s\W-]+/g, '-') }
-          }))
+          connectOrCreate: tags.split(',').map((t: string) => {
+            const trimmed = t.trim()
+            const slugged = new GithubSlugger().slug(trimmed)
+            return {
+              where: { slug: slugged },
+              create: { name: trimmed, slug: slugged }
+            }
+          })
         } : undefined
       }
     })
@@ -194,7 +201,7 @@ router.patch('/:id', async (req: Request, res: Response): Promise<void> => {
       return
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret_key') as { id: string }
+    const decoded = jwt.verify(token, JWT_SECRET) as { id: string }
     const { id } = req.params
     const { title, excerpt, content, status, category, tags } = req.body
 
@@ -214,16 +221,20 @@ router.patch('/:id', async (req: Request, res: Response): Promise<void> => {
         publishedAt: status === 'PUBLISHED' && !existing.publishedAt ? new Date() : existing.publishedAt,
         category: category ? {
           connectOrCreate: {
-            where: { slug: category.toLowerCase().replace(/[\s\W-]+/g, '-') },
-            create: { name: category, slug: category.toLowerCase().replace(/[\s\W-]+/g, '-') }
+            where: { slug: new GithubSlugger().slug(category) },
+            create: { name: category, slug: new GithubSlugger().slug(category) }
           }
         } : undefined,
         tags: tags ? {
           set: [],
-          connectOrCreate: tags.split(',').map((t: string) => ({
-            where: { slug: t.trim().toLowerCase().replace(/[\s\W-]+/g, '-') },
-            create: { name: t.trim(), slug: t.trim().toLowerCase().replace(/[\s\W-]+/g, '-') }
-          }))
+          connectOrCreate: tags.split(',').map((t: string) => {
+            const trimmed = t.trim()
+            const slugged = new GithubSlugger().slug(trimmed)
+            return {
+              where: { slug: slugged },
+              create: { name: trimmed, slug: slugged }
+            }
+          })
         } : undefined
       }
     })
