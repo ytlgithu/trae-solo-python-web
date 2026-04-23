@@ -29,7 +29,7 @@ const MarkdownCodeBlock = ({ language, value }: { language?: string; value: stri
       <button
         type="button"
         onClick={onCopy}
-        className="absolute right-2 top-2 p-2 bg-white/10 hover:bg-white/20 text-white/70 hover:text-white rounded-lg opacity-100 transition-all duration-200 z-10"
+        className="absolute right-2 top-2 p-2 bg-white/10 hover:bg-white/20 text-white/70 hover:text-white rounded-lg opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all duration-200 z-10"
         title="复制代码"
       >
         {copied ? <Check size={16} className="text-green-500" /> : <Copy size={16} />}
@@ -37,10 +37,11 @@ const MarkdownCodeBlock = ({ language, value }: { language?: string; value: stri
       <SyntaxHighlighter
         language={language || 'text'}
         style={vscDarkPlus}
-        PreTag="div"
+        PreTag="pre"
         customStyle={{
           margin: 0,
           background: 'transparent',
+          color: '#D4D4D4',
           padding: '16px',
           fontSize: '0.875rem',
           lineHeight: 1.6,
@@ -211,14 +212,11 @@ export const PostDetail = () => {
             </div>
           )}
 
-          <div className="prose prose-lg dark:prose-invert max-w-none w-full break-words prose-headings:font-['Space_Grotesk'] prose-headings:font-bold prose-headings:scroll-mt-24 prose-a:text-primary hover:prose-a:text-primary/80 prose-img:rounded-xl prose-img:shadow-lg mt-8">
+          <div className="prose prose-lg dark:prose-invert max-w-none w-full break-words prose-headings:font-['Space_Grotesk'] prose-headings:font-bold prose-headings:scroll-mt-24 prose-a:text-primary hover:prose-a:text-primary/80 prose-img:rounded-xl prose-img:shadow-lg prose-pre:bg-transparent prose-pre:m-0 prose-pre:p-0 prose-pre:rounded-none prose-pre:border-0 mt-8">
             <ReactMarkdown 
               remarkPlugins={[remarkGfm]} 
               rehypePlugins={[rehypeSlug]}
               components={{
-                pre({ children }: any) {
-                  return <div className="m-0 p-0 bg-transparent">{children}</div>
-                },
                 code({node, inline, className, children, ...props}: any) {
                   const value = String(children).replace(/\n$/, '')
                   if (!inline) {
