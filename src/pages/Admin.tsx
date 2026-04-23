@@ -328,7 +328,38 @@ export const Admin = () => {
                   <div className="flex items-center gap-3">
                     {u.profile?.avatarUrl ? (
                       <img src={u.profile.avatarUrl} alt="avatar" className="w-10 h-10 rounded-full object-cover border-2 border-primary/20 shrink-0" />
-                    ) : tab === 'taxonomy' ? (
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary border border-primary/20 shrink-0">
+                        <Users size={18} />
+                      </div>
+                    )}
+                    <div>
+                      <div className="text-lg font-bold flex items-center gap-2">
+                        {u.username}
+                        <span className={`px-2 py-0.5 rounded text-xs font-bold ${u.role === 'ADMIN' ? 'bg-primary/10 text-primary' : 'bg-muted/10 text-muted'}`}>
+                          {u.role === 'ADMIN' ? '管理员' : '普通用户'}
+                        </span>
+                      </div>
+                      <div className="text-sm text-muted">
+                        注册时间：{new Date(u.createdAt).toLocaleDateString()}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
+                  <button
+                    onClick={() => toggleUserRole(u)}
+                    disabled={u.username === 'admin' || u.id === user?.id}
+                    className="px-4 py-2 rounded-xl bg-primary/10 text-primary hover:bg-primary/20 disabled:opacity-50 disabled:hover:bg-primary/10 transition-colors text-sm font-bold border border-primary/20"
+                  >
+                    设为{u.role === 'ADMIN' ? '普通用户' : '管理员'}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : tab === 'taxonomy' ? (
         <section className="glass p-10 rounded-3xl space-y-12">
           {/* Categories */}
           <div>
@@ -377,38 +408,7 @@ export const Admin = () => {
             </div>
           </div>
         </section>
-      ) : (
-                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary border border-primary/20 shrink-0">
-                        <Users size={18} />
-                      </div>
-                    )}
-                    <div>
-                      <div className="text-lg font-bold flex items-center gap-2">
-                        {u.username}
-                        <span className={`px-2 py-0.5 rounded text-xs font-bold ${u.role === 'ADMIN' ? 'bg-primary/10 text-primary' : 'bg-muted/10 text-muted'}`}>
-                          {u.role === 'ADMIN' ? '管理员' : '普通用户'}
-                        </span>
-                      </div>
-                      <div className="text-sm text-muted">
-                        注册时间：{new Date(u.createdAt).toLocaleDateString()}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 shrink-0">
-                  <button
-                    onClick={() => toggleUserRole(u)}
-                    disabled={u.id === user?.id || u.username === 'admin' || user?.username !== 'admin'}
-                    className="px-4 py-2 rounded-xl bg-border/40 hover:bg-border/80 disabled:opacity-50 disabled:hover:bg-border/40 transition-colors text-sm font-bold"
-                  >
-                    {u.role === 'ADMIN' ? '取消管理员' : '设为管理员'}
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      ) : (
+      ) : tab === 'logs' ? (
         <section className="glass p-10 rounded-3xl">
           <div className="flex items-center justify-between mb-8">
             <h2 className="text-2xl font-bold flex items-center gap-3">
@@ -467,7 +467,7 @@ export const Admin = () => {
             </button>
           </div>
         </section>
-      )}
+      ) : null}
     </motion.div>
   )
 }
