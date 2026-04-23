@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { fetcher } from '../lib/api'
@@ -10,6 +10,48 @@ import rehypeSlug from 'rehype-slug'
 import GithubSlugger from 'github-slugger'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
+
+const MarkdownCodeBlock = ({ language, value }: { language?: string; value: string }) => {
+  const [copied, setCopied] = useState(false)
+
+  const onCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(value)
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 1500)
+    } catch {
+      setCopied(false)
+    }
+  }
+
+  return (
+    <div className="relative group my-4 rounded-xl overflow-hidden border border-border/40 bg-[#1E1E1E]">
+      <button
+        type="button"
+        onClick={onCopy}
+        className="absolute right-2 top-2 p-2 bg-white/10 hover:bg-white/20 text-white/70 hover:text-white rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-200 z-10"
+        title="复制代码"
+      >
+        {copied ? <Check size={16} className="text-green-500" /> : <Copy size={16} />}
+      </button>
+      <SyntaxHighlighter
+        language={language || 'text'}
+        style={vscDarkPlus}
+        PreTag="div"
+        customStyle={{
+          margin: 0,
+          background: 'transparent',
+          padding: '16px',
+          fontSize: '0.875rem',
+          lineHeight: 1.6,
+        }}
+        codeTagProps={{ style: { background: 'transparent' } }}
+      >
+        {value}
+      </SyntaxHighlighter>
+    </div>
+  )
+}
 
 export const PostDetail = () => {
   const { slug } = useParams()
@@ -175,38 +217,10 @@ export const PostDetail = () => {
               rehypePlugins={[rehypeSlug]}
               components={{
                 code({node, inline, className, children, ...props}: any) {
-                  const match = /language-(\w+)/.exec(className || '')
-                  if (!inline && match) {
-                    const codeString = String(children).replace(/\n$/, '')
-                    return (
-                      <div className="relative group my-4 rounded-xl overflow-hidden bg-[#1E1E1E]">
-                        <button
-                          onClick={() => {
-                            navigator.clipboard.writeText(codeString)
-                            const btn = document.getElementById(`copy-${codeString.substring(0, 10)}`)
-                            if (btn) {
-                              btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-green-500"><polyline points="20 6 9 17 4 12"></polyline></svg>'
-                              setTimeout(() => {
-                                btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>'
-                              }, 2000)
-                            }
-                          }}
-                          id={`copy-${codeString.substring(0, 10)}`}
-                          className="absolute right-2 top-2 p-2 bg-white/10 hover:bg-white/20 text-white/70 hover:text-white rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-200 z-10"
-                          title="复制代码"
-                        >
-                          <Copy size={16} />
-                        </button>
-                        <SyntaxHighlighter
-                          {...props}
-                          children={codeString}
-                          style={vscDarkPlus}
-                          language={match[1]}
-                          PreTag="div"
-                          className="!my-0 !bg-transparent text-sm"
-                        />
-                      </div>
-                    )
+                  const value = String(children).replace(/\n$/, '')
+                  if (!inline) {
+                    const match = /language-(\w+)/.exec(className || '')
+                    return <MarkdownCodeBlock language={match?.[1]} value={value} />
                   }
                   return (
                     <code {...props} className={`${className || ''} bg-muted px-1.5 py-0.5 rounded-md font-mono text-sm`}>
