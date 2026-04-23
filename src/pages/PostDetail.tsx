@@ -29,7 +29,7 @@ const MarkdownCodeBlock = ({ language, value }: { language?: string; value: stri
       <button
         type="button"
         onClick={onCopy}
-        className="absolute right-2 top-2 p-2 bg-white/10 hover:bg-white/20 text-white/70 hover:text-white rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-200 z-10"
+        className="absolute right-2 top-2 p-2 bg-white/10 hover:bg-white/20 text-white/70 hover:text-white rounded-lg opacity-100 transition-all duration-200 z-10"
         title="复制代码"
       >
         {copied ? <Check size={16} className="text-green-500" /> : <Copy size={16} />}
@@ -134,7 +134,7 @@ export const PostDetail = () => {
     >
       {/* Left Sidebar: TOC */}
       <aside className="hidden lg:block w-64 shrink-0">
-        <div className="sticky top-24 space-y-8 max-h-[calc(100vh-6rem)] overflow-y-auto pb-8 scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
+        <div className="sticky top-24 space-y-8 max-h-[calc(100vh-6rem)] overflow-y-auto overscroll-contain pb-8 scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
           <Link to="/" className="inline-flex items-center gap-2 text-muted hover:text-foreground transition-colors">
             <ArrowLeft size={20} />
             返回首页
@@ -216,6 +216,9 @@ export const PostDetail = () => {
               remarkPlugins={[remarkGfm]} 
               rehypePlugins={[rehypeSlug]}
               components={{
+                pre({ children }: any) {
+                  return <div className="m-0 p-0 bg-transparent">{children}</div>
+                },
                 code({node, inline, className, children, ...props}: any) {
                   const value = String(children).replace(/\n$/, '')
                   if (!inline) {
