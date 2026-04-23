@@ -87,7 +87,17 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
     const posts = await prisma.post.findMany({
       where,
       orderBy: { publishedAt: 'desc' },
-      include: {
+      take: 20, // Add limit to prevent massive payload
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        excerpt: true,
+        status: true,
+        createdAt: true,
+        publishedAt: true,
+        authorId: true,
+        categoryId: true,
         author: { select: { username: true } },
         category: true,
         tags: true

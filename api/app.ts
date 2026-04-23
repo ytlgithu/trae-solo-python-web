@@ -10,6 +10,7 @@ import express, {
 import cors from 'cors'
 import path from 'path'
 import dotenv from 'dotenv'
+import compression from 'compression'
 import { fileURLToPath } from 'url'
 import authRoutes from './routes/auth.js'
 import postRoutes from './routes/posts.js'
@@ -24,6 +25,9 @@ const __dirname = path.dirname(__filename)
 dotenv.config()
 
 const app: express.Application = express()
+
+// Enable gzip compression
+app.use(compression())
 
 // Set up CORS - restrict in production
 const corsOptions = {

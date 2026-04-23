@@ -5,18 +5,28 @@ import tsconfigPaths from "vite-tsconfig-paths";
 import { traeBadgePlugin } from 'vite-plugin-trae-solo-badge';
 
 // https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'markdown-vendor': ['react-markdown', 'remark-gfm', 'rehype-slug', 'github-slugger'],
+          'syntax-vendor': ['react-syntax-highlighter'],
+          'ui-vendor': ['framer-motion', 'lucide-react']
+        }
+      }
+    }
+  },
   plugins: [
     react({
       babel: {
-        plugins: [
-          'react-dev-locator',
-        ],
+        plugins: mode === 'development' ? ['react-dev-locator'] : [],
       },
     }),
     traeBadgePlugin({
